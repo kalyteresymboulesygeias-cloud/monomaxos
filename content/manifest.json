@@ -1,0 +1,11 @@
+{
+  "source": "https://www.monomaxos.gr/wp-json/wp/v2",
+  "exported_at": "2026-11-02 22:15:09 Europe/Athens",
+  "totals": {
+    "posts": 3975,
+    "posts_reported": 3975,
+    "pages": 3,
+    "categories": 13
+  },
+  "failures": []
+}
