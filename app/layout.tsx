@@ -4,6 +4,7 @@ import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import AdSlot from "@/components/AdSlot";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { adSlotVisible, adsenseClient } from "@/lib/ads";
 import { getNavCategories } from "@/lib/content";
 import "./globals.css";
 
@@ -26,7 +27,8 @@ export const metadata: Metadata = {
   description: "Ενημέρωση για υγεία, διατροφή και ευεξία.",
 };
 
-const ADSENSE = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+const ADSENSE = adsenseClient();
+const LEADERBOARD = process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const nav = getNavCategories();
@@ -54,9 +56,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
         <SiteHeader categories={nav} />
-        <div className="mx-auto max-w-6xl px-4 pt-4">
-          <AdSlot format="leaderboard" slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD} />
-        </div>
+        {adSlotVisible(LEADERBOARD) ? (
+          <div className="mx-auto max-w-6xl px-4 pt-4">
+            <AdSlot format="leaderboard" slot={LEADERBOARD} />
+          </div>
+        ) : null}
         <main id="content" className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
           {children}
         </main>

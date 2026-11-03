@@ -4,6 +4,7 @@ import { fmtDate } from "@/lib/content";
 import AdSlot from "@/components/AdSlot";
 import ArticleCard from "@/components/ArticleCard";
 import { primaryCategory } from "@/components/editorial";
+import { adSlotVisible } from "@/lib/ads";
 
 export default function SectionRail({
   kicker,
@@ -25,6 +26,9 @@ export default function SectionRail({
   if (!posts.length) return null;
   const slot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED;
   const sideSlot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR;
+  const showInfeed = Boolean(ads && adSlotVisible(slot));
+  const showSide = Boolean(ads && adSlotVisible(sideSlot));
+  const withRail = posts.length > 6 || showSide;
 
   return (
     <section>
@@ -42,7 +46,7 @@ export default function SectionRail({
       </div>
 
       {layout === "feature-list" ? (
-        <div className={posts.length > 6 || ads ? "grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(16rem,0.7fr)]" : "space-y-8"}>
+        <div className={withRail ? "grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(16rem,0.7fr)]" : "space-y-8"}>
           <div className="space-y-8">
             <ArticleCard post={posts[0]} category={primaryCategory(posts[0], categories)} variant="horizontal" />
             {posts.length > 1 ? (
@@ -54,7 +58,7 @@ export default function SectionRail({
                 ))}
               </ul>
             ) : null}
-            {ads ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
+            {showInfeed ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
             {posts.length > 3 ? (
               <ul className="grid gap-6 sm:grid-cols-2">
                 {posts.slice(3, 6).map((post) => (
@@ -64,9 +68,9 @@ export default function SectionRail({
                 ))}
               </ul>
             ) : null}
-            {ads && posts.length > 5 ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
+            {showInfeed && posts.length > 5 ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
           </div>
-          {posts.length > 6 || ads ? (
+          {withRail ? (
           <aside>
             <h3 className="font-serif text-xl text-ink">Συνεχίστε την ανάγνωση</h3>
             <ol className="mt-4 divide-y divide-line">
@@ -88,7 +92,7 @@ export default function SectionRail({
                 </li>
               ))}
             </ol>
-            {ads ? <AdSlot format="sidebar" slot={sideSlot} className="mt-6" /> : null}
+            {showSide ? <AdSlot format="sidebar" slot={sideSlot} className="mt-6" /> : null}
           </aside>
           ) : null}
         </div>

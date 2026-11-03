@@ -25,9 +25,13 @@ npm run build && npm start
 - `/[slug]/` — άρθρο ή σελίδα (ίδιο slug με WordPress)
 - `/category/[slug]/` και `/category/[slug]/page/N/`
 
+## AdSense
+Auto ads χρειάζεται μόνο `NEXT_PUBLIC_ADSENSE_CLIENT`. Το `app/layout.tsx` φορτώνει το `adsbygoogle.js` όταν αυτό είναι ορισμένο· οι θέσεις τις αποφασίζει το AdSense.
+Τα `NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD`, `_INFEED`, `_ARTICLE` και `_SIDEBAR` είναι προαιρετικά και αφορούν χειροκίνητες μονάδες. Χωρίς slot id, και με ορισμένο client, δεν ζωγραφίζεται κενό πλαίσιο «Διαφήμιση». Αν λείπει και το client id, τα πλαίσια μένουν ως οδηγός διάταξης.
+
 ## Επόμενα βήματα για Vercel
 1. Push σε GitHub → Import στο Vercel.
-2. Env var `NEXT_PUBLIC_ADSENSE_CLIENT` στο Vercel.
+2. Env var `NEXT_PUBLIC_ADSENSE_CLIENT` στο Vercel (αρκεί για Auto ads· τα slot ids είναι προαιρετικά).
 3. Πριν αλλάξει το DNS: μεταφορά εικόνων (αλλιώς σπάνε όταν κλείσει το Hostinger), `ads.txt` στο `public/`, sitemap/robots, redirects από παλιά URLs.
 4. Domain monomaxos.gr στο Vercel → αλλαγή DNS.
 
