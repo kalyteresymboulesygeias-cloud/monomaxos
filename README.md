@@ -53,3 +53,44 @@ Auto ads χρειάζεται μόνο `NEXT_PUBLIC_ADSENSE_CLIENT`. Το `app/l
 ### Σύσταση (το πιο εύκολο, δωρεάν)
 **Cloudflare R2** (10 GB δωρεάν, χωρίς χρέωση egress): ανέβασε τον φάκελο `public/wp-content` σε bucket (π.χ. με `rclone copy public/wp-content r2:monomaxos-media/wp-content`), σύνδεσε custom domain `media.monomaxos.gr`, όρισε `NEXT_PUBLIC_MEDIA_BASE=https://media.monomaxos.gr` στο Vercel, και **μην** κάνεις commit το `public/wp-content` (πρόσθεσέ το στο `.gitignore`).
 Γιατί όχι στο ίδιο repo/Vercel: ~1,8 GB βαραίνει το git και τα deploys, και το Vercel Hobby έχει όριο bandwidth (~100 GB/μήνα) και image optimization — με traffic από AdSense άρθρα οι εικόνες είναι το μεγαλύτερο κόστος. Εναλλακτικά: κράτα προσωρινά το Hostinger μόνο για media σε subdomain.
+
+## PageSpeed: μέγεθος εικόνας και cache
+
+Οι κάρτες, το εξώφυλλο και οι `<img>` μέσα στο άρθρο περνούν από το Next.js Image Optimization (`/_next/image`). Ο browser παίρνει WebP ή AVIF στο πλάτος του `sizes`· lazy παντού εκτός από την εικόνα LCP (`preload` + `fetchpriority="high"`). Τα πρωτότυπα στο R2 δεν ξανασυμπιέζονται.
+
+Τα hashed αρχεία στο `/_next/static` έχουν ήδη `Cache-Control: public, max-age=31536000, immutable` από το Next.js. Το `headers()` στο `next.config` δεν μπορεί να το αλλάξει.
+
+Οι απαντήσεις του `/_next/image` χρησιμοποιούν `images.minimumCacheTTL` (1 χρόνος: `public, max-age=31536000, must-revalidate`), επειδή το public R2 host δεν στέλνει Cache-Control. Ο browser δεν ζητά πια το αρχείο του R2 για αυτές τις εικόνες· το optimizer το κατεβάζει server-side.
+
+Για απευθείας αιτήματα (OG, παλιά URL) το header μπαίνει στα αντικείμενα του bucket, όχι από αυτή την εφαρμογή (δεν υπάρχουν Cloudflare credentials εδώ):
+
+```
+Cache-Control: public, max-age=31536000, immutable
+```
+
+Νέο ανέβασμα με rclone (δεν ξανακωδικοποιεί τα bytes):
+
+```bash
+rclone copy public/wp-content r2:BUCKET/wp-content \
+  --header-upload "Cache-Control: public, max-age=31536000, immutable"
+```
+
+Για το ήδη ανεβασμένο corpus, το ίδιο header χωρίς νέο encode γίνεται με S3 `CopyObject` (`MetadataDirective=REPLACE`, ίδιο key) ή με Worker μπροστά από το custom domain του bucket:
+
+```js
+export default {
+  async fetch(request, env) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    const key = new URL(request.url).pathname.replace(/^\//, "");
+    const object = await env.MEDIA.get(key);
+    if (!object) return new Response("Not found", { status: 404 });
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    headers.set("ETag", object.httpEtag);
+    return new Response(object.body, { headers });
+  },
+};
+```

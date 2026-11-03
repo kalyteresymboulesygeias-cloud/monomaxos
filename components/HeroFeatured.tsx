@@ -4,6 +4,7 @@ import { fmtDate } from "@/lib/content";
 import ArticleCard from "@/components/ArticleCard";
 import CoverImage from "@/components/CoverImage";
 import { displayName, primaryCategory } from "@/components/editorial";
+import { IMAGE_SIZES } from "@/lib/images";
 import { mediaUrl } from "@/lib/media";
 
 export default function HeroFeatured({
@@ -38,7 +39,7 @@ export default function HeroFeatured({
             return (
               <li key={post.id} className="py-4 first:pt-3">
                 <Link href={`/${post.slug}`} className="group grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
-                  <CoverImage src={src} alt="" className="aspect-square rounded-lg" />
+                  <CoverImage src={src} alt="" sizes={IMAGE_SIZES.thumb} className="aspect-square rounded-lg" />
                   <div>
                     {category ? <span className="text-xs font-medium text-pine">{displayName(category.name)}</span> : null}
                     <h2 className="mt-1 text-balance font-serif text-lg leading-snug text-ink decoration-coral/80 underline-offset-4 group-hover:underline">
