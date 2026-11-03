@@ -18,6 +18,11 @@
 
 :root {
   color-scheme: light;
+  --nav-wash: #d5eee2;
+}
+
+.nav-wash {
+  background-color: var(--nav-wash);
 }
 
 html {

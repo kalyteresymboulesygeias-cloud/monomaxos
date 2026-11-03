@@ -48,12 +48,15 @@ export default function MobileNav({ categories }: { categories: NavCategory[] })
             role="dialog"
             aria-modal="true"
             aria-label="Μενού"
-            className="flex h-full w-[min(100%,22rem)] flex-col bg-paper px-6 py-5 shadow-none"
+            className="nav-wash flex h-full w-[min(100%,22rem)] flex-col px-6 py-5 shadow-none"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <Link href="/" onClick={() => setOpen(false)} className="font-serif text-2xl text-pine">
-                Μονομάχος
+              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2 font-serif text-2xl text-pine">
+                <span className="grid size-8 place-items-center rounded-md bg-pine font-serif text-lg leading-none text-paper" aria-hidden>
+                  M
+                </span>
+                Monomaxos
               </Link>
               <button
                 ref={closeRef}
