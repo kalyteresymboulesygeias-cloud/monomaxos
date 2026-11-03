@@ -6,6 +6,7 @@ import ArticleBody from "@/components/ArticleBody";
 import CoverImage from "@/components/CoverImage";
 import SectionRail from "@/components/SectionRail";
 import { displayName, imageLabel } from "@/components/editorial";
+import { adSlotVisible } from "@/lib/ads";
 import { decode, fmtDate, prepareContent, getCategories, getIndex, getPage, getPages, getPost, getPostsByCategory } from "@/lib/content";
 import { mediaUrl, rewriteMedia } from "@/lib/media";
 
@@ -52,11 +53,13 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
   const label = imageLabel(post.featured_image?.alt, title);
   const sideSlot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR;
   const articleSlot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ARTICLE;
+  const showSideAd = adSlotVisible(sideSlot);
+  const showArticleAd = adSlotVisible(articleSlot);
 
   return (
     <div className="space-y-16">
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-12">
-        <article className="mx-auto w-full max-w-[72ch] lg:mx-0">
+      <div className={showSideAd ? "lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-12" : undefined}>
+        <article className={`mx-auto w-full max-w-[72ch]${showSideAd ? " lg:mx-0" : ""}`}>
           <header>
             {categories.length ? (
               <p className="flex flex-wrap gap-x-3 text-xs font-medium text-pine">
@@ -85,12 +88,14 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
               {label.caption ? <figcaption className="mt-2 text-sm text-muted">{label.caption}</figcaption> : null}
             </figure>
           ) : null}
-          <AdSlot format="article" slot={articleSlot} />
+          {showArticleAd ? <AdSlot format="article" slot={articleSlot} /> : null}
           <ArticleBody html={rewriteMedia(prepareContent(post.content.rendered))} />
         </article>
-        <aside className="mt-10 hidden lg:mt-0 lg:block" aria-label="Διαφήμιση στη στήλη">
-          <AdSlot format="sidebar" slot={sideSlot} />
-        </aside>
+        {showSideAd ? (
+          <aside className="mt-10 hidden lg:mt-0 lg:block" aria-label="Διαφήμιση στη στήλη">
+            <AdSlot format="sidebar" slot={sideSlot} />
+          </aside>
+        ) : null}
       </div>
       <SectionRail
         kicker="Συνέχεια"
@@ -99,9 +104,11 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
         posts={related}
         categories={getCategories()}
       />
-      <div className="lg:hidden">
-        <AdSlot format="sidebar" slot={sideSlot} />
-      </div>
+      {showSideAd ? (
+        <div className="lg:hidden">
+          <AdSlot format="sidebar" slot={sideSlot} />
+        </div>
+      ) : null}
     </div>
   );
 }

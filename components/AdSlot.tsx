@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { adSlotId, adsenseClient, adSlotVisible } from "@/lib/ads";
 
 export type AdFormat = "leaderboard" | "infeed" | "article" | "sidebar";
 
@@ -26,9 +27,10 @@ export default function AdSlot({
   slot?: string;
   className?: string;
 }) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  const client = adsenseClient();
+  const unit = adSlotId(slot);
   const pushed = useRef(false);
-  const live = Boolean(client && slot);
+  const live = Boolean(client && unit);
   const margin = format === "leaderboard" || format === "sidebar" ? "" : "my-8";
 
   useEffect(() => {
@@ -40,6 +42,8 @@ export default function AdSlot({
       pushed.current = false;
     }
   }, [live]);
+
+  if (!adSlotVisible(slot)) return null;
 
   return (
     <aside
@@ -54,7 +58,7 @@ export default function AdSlot({
               className="adsbygoogle mx-auto block min-h-0 w-full flex-1"
               style={{ display: "block" }}
               data-ad-client={client}
-              data-ad-slot={slot}
+              data-ad-slot={unit}
               data-ad-format="auto"
               data-full-width-responsive="true"
             />
