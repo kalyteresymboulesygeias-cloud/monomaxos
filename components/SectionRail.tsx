@@ -77,7 +77,7 @@ export default function SectionRail({
               {posts.slice(6).map((post, index) => (
                 <li key={post.id}>
                   <Link href={`/${post.slug}`} className="group flex gap-3 py-3">
-                    <span className="font-serif text-lg text-coral" aria-hidden>
+                    <span className="font-serif text-lg text-coral-ink" aria-hidden>
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <span>

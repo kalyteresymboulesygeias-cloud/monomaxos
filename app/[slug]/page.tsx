@@ -8,7 +8,9 @@ import SectionRail from "@/components/SectionRail";
 import { displayName, imageLabel } from "@/components/editorial";
 import { adSlotVisible } from "@/lib/ads";
 import { decode, fmtDate, prepareContent, getCategories, getIndex, getPage, getPages, getPost, getPostsByCategory } from "@/lib/content";
+import { IMAGE_SIZES } from "@/lib/images";
 import { mediaUrl, rewriteMedia } from "@/lib/media";
+import { optimizeArticleHtml } from "@/lib/optimize-html-images";
 
 export function generateStaticParams() {
   return [...getPages().map((page) => ({ slug: page.slug })), ...getIndex().slice(0, 200).map((post) => ({ slug: post.slug }))];
@@ -39,7 +41,7 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
         <h1 className="text-balance font-serif text-4xl leading-tight text-ink sm:text-5xl">{decode(page.title.rendered)}</h1>
         <div
           className="article-prose prose prose-lg mt-8 max-w-none prose-headings:font-serif prose-headings:font-medium prose-headings:text-pine-deep prose-p:text-ink prose-a:text-pine prose-blockquote:border-coral prose-blockquote:font-serif"
-          dangerouslySetInnerHTML={{ __html: rewriteMedia(page.content.rendered) }}
+          dangerouslySetInnerHTML={{ __html: optimizeArticleHtml(rewriteMedia(page.content.rendered)) }}
         />
       </article>
     );
@@ -81,8 +83,7 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
                 src={image}
                 alt={label.alt}
                 priority
-                width={post.featured_image?.width}
-                height={post.featured_image?.height}
+                sizes={IMAGE_SIZES.article}
                 className="aspect-[16/9] rounded-2xl"
               />
               {label.caption ? <figcaption className="mt-2 text-sm text-muted">{label.caption}</figcaption> : null}

@@ -14,6 +14,8 @@
   --color-pine-deep: #102e2b;
   --color-foam: #e7f1ee;
   --color-coral: #b86a5d;
+  /* Text on paper (#f6f1e8). #b86a5d is ~3.6:1; #9a5144 is ~5.1:1 (WCAG AA). */
+  --color-coral-ink: #9a5144;
 }
 
 :root {
