@@ -1,24 +1,24 @@
-import Link from "next/link";
-import { IndexItem, fmtDate } from "@/lib/content";
-import { mediaUrl } from "@/lib/media";
+import type { IndexItem } from "@/lib/content";
+import { getCategories } from "@/lib/content";
+import AdSlot from "@/components/AdSlot";
+import ArticleCard from "@/components/ArticleCard";
+import { primaryCategory } from "@/components/editorial";
 
-export default function PostList({ posts }: { posts: IndexItem[] }) {
+export default function PostList({ posts, ads = false }: { posts: IndexItem[]; ads?: boolean }) {
+  const categories = getCategories();
+  const slot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED;
   return (
-    <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {posts.map(p => (
-        <li key={p.id} className="overflow-hidden rounded-lg border border-gray-200">
-          <Link href={`/${p.slug}`} className="block hover:opacity-90">
-            {p.image && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={mediaUrl(p.image)} alt="" loading="lazy" className="aspect-video w-full object-cover" />
-            )}
-            <div className="p-4">
-              <time className="text-xs text-gray-500">{fmtDate(p.date)}</time>
-              <h2 className="mt-1 font-semibold leading-snug">{p.title}</h2>
+    <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+      {posts.map((post, index) => (
+        <div key={post.id} className="contents">
+          <ArticleCard post={post} category={primaryCategory(post, categories)} />
+          {ads && (index === 2 || index === 5) ? (
+            <div className="sm:col-span-2 lg:col-span-3">
+              <AdSlot format="infeed" slot={slot} className="my-0" />
             </div>
-          </Link>
-        </li>
+          ) : null}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }

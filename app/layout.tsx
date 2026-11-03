@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Script from "next/script";
+import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
+import AdSlot from "@/components/AdSlot";
+import SiteFooter from "@/components/SiteFooter";
+import SiteHeader from "@/components/SiteHeader";
 import { getNavCategories } from "@/lib/content";
 import "./globals.css";
+
+const sans = Source_Sans_3({
+  subsets: ["latin", "greek"],
+  variable: "--font-sans-src",
+  display: "swap",
+});
+
+const serif = Source_Serif_4({
+  subsets: ["latin", "greek"],
+  style: ["normal", "italic"],
+  variable: "--font-serif-src",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.monomaxos.gr"),
@@ -10,27 +26,41 @@ export const metadata: Metadata = {
   description: "Ενημέρωση για υγεία, διατροφή και ευεξία.",
 };
 
-const ADSENSE = process.env.NEXT_PUBLIC_ADSENSE_CLIENT; // e.g. ca-pub-1970116766825015
+const ADSENSE = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const nav = getNavCategories();
   return (
-    <html lang="el">
-      <body className="bg-white text-gray-900 antialiased">
-        {ADSENSE && (
-          <Script async strategy="afterInteractive" crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE}`} />
-        )}
-        <header className="border-b border-gray-200">
-          <div className="mx-auto max-w-6xl px-4 py-4">
-            <Link href="/" className="text-2xl font-bold text-emerald-700">Μονομάχος</Link>
-            <nav className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {nav.map(c => <Link key={c.id} href={`/category/${c.slug}`} className="hover:text-emerald-700">{c.name}</Link>)}
-            </nav>
+    <html lang="el" className={`${sans.variable} ${serif.variable}`}>
+      <body className="bg-paper text-ink antialiased">
+        {ADSENSE ? (
+          <Script
+            async
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE}`}
+          />
+        ) : null}
+        <a
+          href="#content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-paper focus:px-4 focus:py-2"
+        >
+          Μετάβαση στο περιεχόμενο
+        </a>
+        <div className="hidden bg-pine text-sm text-paper sm:block">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-2.5">
+            <p className="font-medium">Περιοδικό υγείας και ευεξίας</p>
+            <p className="text-paper/85">Υγεία · Ομορφιά · Διατροφή · Ψυχική υγεία</p>
           </div>
-        </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-        <footer className="border-t border-gray-200 py-6 text-center text-sm text-gray-500">© {new Date().getFullYear()} Μονομάχος</footer>
+        </div>
+        <SiteHeader categories={nav} />
+        <div className="mx-auto max-w-6xl px-4 pt-4">
+          <AdSlot format="leaderboard" slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD} />
+        </div>
+        <main id="content" className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+          {children}
+        </main>
+        <SiteFooter categories={nav} />
       </body>
     </html>
   );

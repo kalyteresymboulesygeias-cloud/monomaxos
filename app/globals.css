@@ -1,2 +1,128 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: var(--font-sans-src), "Source Sans 3", "Segoe UI", sans-serif;
+  --font-serif: var(--font-serif-src), "Source Serif 4", Georgia, "Times New Roman", serif;
+  --color-paper: #f6f1e8;
+  --color-paper-deep: #efe6d8;
+  --color-sand: #e4d8c6;
+  --color-line: #ddd1c0;
+  --color-ink: #241f1c;
+  --color-muted: #4e463f;
+  --color-pine: #1b4742;
+  --color-pine-deep: #102e2b;
+  --color-foam: #e7f1ee;
+  --color-coral: #b86a5d;
+}
+
+:root {
+  color-scheme: light;
+  --nav-wash: #d5eee2;
+}
+
+.nav-wash {
+  background-color: var(--nav-wash);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #d5e8e3;
+  color: var(--color-pine-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-pine);
+  outline-offset: 3px;
+}
+
+.article-prose {
+  max-width: 72ch;
+  color: var(--color-ink);
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.article-prose :where(p, ul, ol, blockquote, figure, table) {
+  margin-block: 1.15em;
+}
+
+.article-prose :where(h2, h3) {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-pine-deep);
+  text-wrap: balance;
+}
+
+.article-prose :where(h2) {
+  margin-top: 1.8em;
+  font-size: 1.75rem;
+}
+
+.article-prose :where(h3) {
+  margin-top: 1.5em;
+  font-size: 1.35rem;
+}
+
+.article-prose :where(a) {
+  color: var(--color-pine);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.article-prose :where(a:hover) {
+  color: var(--color-pine-deep);
+}
+
+.article-prose :where(blockquote) {
+  border-left: 2px solid var(--color-coral);
+  padding-left: 1rem;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--color-pine-deep);
+}
+
+.article-prose :where(ul, ol) {
+  padding-left: 1.25rem;
+}
+
+.article-prose :where(ul) {
+  list-style: disc;
+}
+
+.article-prose :where(ol) {
+  list-style: decimal;
+}
+
+.article-prose :where(li + li) {
+  margin-top: 0.35em;
+}
+
+.article-prose :where(img, video, iframe) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+
+.article-prose :where(hr) {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  margin-block: 2rem;
+}
+
+.article-prose :where(strong) {
+  font-weight: 600;
+}

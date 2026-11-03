@@ -4,8 +4,8 @@ import path from "node:path";
 // Render-time media rewrite. content/media-map.json is written by scripts/migrate-images.mjs
 // ({ "https://www.monomaxos.gr/wp-content/uploads/..": "/wp-content/uploads/.." }).
 // Only migrated URLs are rewritten; others stay pointing at www.monomaxos.gr.
-// NEXT_PUBLIC_MEDIA_BASE (e.g. https://media.monomaxos.gr) prefixes rewritten paths when media lives on R2/CDN;
-// empty = serve from this app's /public.
+// NEXT_PUBLIC_MEDIA_BASE prefixes rewritten /wp-content/uploads/... paths (Cloudflare R2).
+// empty = serve those paths from this app's /public. Unmapped URLs are left unchanged.
 let _map: Record<string, string> | null = null;
 function getMap() {
   if (_map) return _map;
