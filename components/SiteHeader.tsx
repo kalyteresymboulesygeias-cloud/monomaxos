@@ -16,8 +16,8 @@ export default function SiteHeader({ categories }: { categories: NavCategory[] }
         </Link>
         <CategoryNav
           categories={items}
-          className="hidden min-w-0 flex-1 items-center justify-end gap-x-4 xl:gap-x-5 lg:flex"
-          itemClassName="whitespace-nowrap text-base font-medium leading-none"
+          className="hidden min-w-0 flex-1 items-center justify-end gap-x-3.5 lg:flex"
+          itemClassName="whitespace-nowrap text-lg font-medium leading-none"
         />
         <div className="ml-auto lg:hidden">
           <MobileNav categories={items} />
