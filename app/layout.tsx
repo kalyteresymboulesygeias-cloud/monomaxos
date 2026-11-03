@@ -47,10 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Μετάβαση στο περιεχόμενο
         </a>
-        <div className="hidden border-b border-line bg-paper-deep/80 text-[11px] tracking-[0.16em] text-muted sm:block">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2">
-            <p>Περιοδικό υγείας και ευεξίας</p>
-            <p>Υγεία · Ομορφιά · Διατροφή · Ψυχική υγεία</p>
+        <div className="hidden bg-pine text-sm text-paper sm:block">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-2.5">
+            <p className="font-medium">Περιοδικό υγείας και ευεξίας</p>
+            <p className="text-paper/85">Υγεία · Ομορφιά · Διατροφή · Ψυχική υγεία</p>
           </div>
         </div>
         <SiteHeader categories={nav} />
