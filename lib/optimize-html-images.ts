@@ -49,12 +49,20 @@ function contentSizes(width: number) {
   return IMAGE_SIZES.article;
 }
 
+function replaceSrc(tag: string, src: string) {
+  return tag.replace(/(^|\s)src\s*=\s*(?:"[^"]*"|'[^']*')/i, `$1src="${escapeAttr(src)}"`);
+}
+
+function fileTag(tag: string, rawSrc: string, src: string) {
+  return src === rawSrc ? tag : replaceSrc(tag, src);
+}
+
 function optimizeTag(tag: string) {
-  const dims = dimensions(tag);
   const rawSrc = attr(tag, "src");
-  if (!dims || !rawSrc) return tag;
+  if (!rawSrc) return tag;
   const src = upgradeMediaSrc(rawSrc);
-  if (!isOptimizableImageSrc(src)) return tag;
+  const dims = dimensions(tag);
+  if (!dims || !isOptimizableImageSrc(src)) return fileTag(tag, rawSrc, src);
   try {
     const { props } = getImageProps({
       src,
@@ -63,21 +71,27 @@ function optimizeTag(tag: string) {
       height: dims.height,
       sizes: contentSizes(dims.width),
     });
-    if (!props.srcSet || !props.src.includes("/_next/image")) return tag;
+    // images.unoptimized serves the file URL and leaves srcSet empty.
+    // Keep the stored tag (https upgrade only) so article HTML does not
+    // request /_next/image while the optimizer returns 402.
+    if (!props.srcSet || !props.src?.includes("/_next/image")) return fileTag(tag, rawSrc, src);
     const className = attr(tag, "class");
     const classAttr = className ? ` class="${escapeAttr(className)}"` : "";
     const sizesAttr = props.sizes ? ` sizes="${escapeAttr(props.sizes)}"` : "";
-    return `<img src="${escapeAttr(props.src)}" srcset="${escapeAttr(props.srcSet)}"${sizesAttr} width="${props.width}" height="${props.height}" alt="${escapeAttr(attr(tag, "alt"))}" loading="lazy" decoding="async"${classAttr} />`;
+    // If /_next/image fails, swap to the file. Clearing srcset stops the
+    // browser from retrying the optimizer candidates.
+    return `<img src="${escapeAttr(props.src)}" srcset="${escapeAttr(props.srcSet)}"${sizesAttr} width="${props.width}" height="${props.height}" alt="${escapeAttr(attr(tag, "alt"))}" loading="lazy" decoding="async"${classAttr} data-full-src="${escapeAttr(src)}" onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.fullSrc" />`;
   } catch {
-    return tag;
+    return fileTag(tag, rawSrc, src);
   }
 }
 
 /**
  * Article HTML is stored markup, so it cannot mount the Image component
  * without splitting parent tags. getImageProps is the same optimizer:
- * sized WebP/AVIF URLs, with the original tag left in place when the host
- * is outside remotePatterns or the dimensions are unknown.
+ * sized WebP/AVIF URLs when Image Optimization is enabled, with the original
+ * tag left in place when the host is outside remotePatterns, the dimensions
+ * are unknown, or images.unoptimized is set.
  */
 export function optimizeArticleHtml(html: string) {
   if (!html.includes("<img")) return html;
