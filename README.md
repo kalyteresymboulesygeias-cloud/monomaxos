@@ -22,8 +22,10 @@ npm run build && npm start
 
 ## Routes
 - `/` και `/page/N/` — τελευταία άρθρα
-- `/[slug]/` — άρθρο ή σελίδα (ίδιο slug με WordPress)
+- `/[slug]/` — άρθρο ή σελίδα (ίδιο slug με WordPress, με κάθετο στο τέλος)
 - `/category/[slug]/` και `/category/[slug]/page/N/`
+
+Κανονικός host: `https://monomaxos.gr`. Το `www.monomaxos.gr` κάνει μόνιμη ανακατεύθυνση εκεί. Τα canonical, το sitemap και τα `link` των νέων άρθρων χρησιμοποιούν το apex.
 
 ## AdSense
 Auto ads χρειάζεται μόνο `NEXT_PUBLIC_ADSENSE_CLIENT`. Το `app/layout.tsx` φορτώνει το `adsbygoogle.js` όταν αυτό είναι ορισμένο· οι θέσεις τις αποφασίζει το AdSense.
@@ -32,8 +34,45 @@ Auto ads χρειάζεται μόνο `NEXT_PUBLIC_ADSENSE_CLIENT`. Το `app/l
 ## Επόμενα βήματα για Vercel
 1. Push σε GitHub → Import στο Vercel.
 2. Env var `NEXT_PUBLIC_ADSENSE_CLIENT` στο Vercel (αρκεί για Auto ads· τα slot ids είναι προαιρετικά).
-3. Πριν αλλάξει το DNS: μεταφορά εικόνων (αλλιώς σπάνε όταν κλείσει το Hostinger), `ads.txt` στο `public/`, sitemap/robots, redirects από παλιά URLs.
+3. Πριν αλλάξει το DNS: μεταφορά εικόνων (αλλιώς σπάνε όταν κλείσει το Hostinger), `ads.txt` στο `public/` (ήδη υπάρχει), redirects από παλιά URLs. Το `app/sitemap.ts` και το `app/robots.ts` βγαίνουν στο build.
 4. Domain monomaxos.gr στο Vercel → αλλαγή DNS.
+
+## Αυτόματη δημοσίευση
+
+Καθημερινά, ο εξωτερικός operator (ρουτίνα Grok / Cursor agent) γράφει **πρωτότυπο ελληνικό** άρθρο και το περνάει από το script. Το script δεν καλεί API τεχνητής νοημοσύνης, δεν κρατά μυστικά και δεν κατεβάζει κείμενα από άλλους ιστότοπους.
+
+**Το περιεχόμενο πρέπει να είναι πρωτότυπα ελληνικά. Όχι αντιγραφή, όχι scrape, όχι spin/rewrite ξένων άρθρων.** Original Greek only — do not scrape or rewrite third-party articles.
+
+```bash
+node scripts/publish-post.mjs --dry-run --file article.json
+node scripts/publish-post.mjs --file article.json          # γράφει content/
+npm run publish:check                                      # ελέγχοι χωρίς άρθρα στο repo
+```
+
+Το JSON (αρχείο ή stdin) χρειάζεται `original: true`, `title`, HTML `content`, `category` (slug ή id), `meta_description`, `image` και `image_alt`. Προαιρετικά: `slug`, `excerpt`, `tags` (μόνο αριθμητικά id — δεν υπάρχει ευρετήριο ονομάτων), `date` (`YYYY-MM-DDTHH:mm:ss`, ώρα Αθήνας), `image_width`, `image_height`.
+
+Μετά από επιτυχές publish: commit στα `content/posts/posts-NNN.json`, `content/posts-index.json`, `content/categories.json` και deploy. Το sitemap ξαναχτίζεται στο `next build` και πιάνει όλα τα άρθρα, τις κατηγορίες με άρθρα και τις στατικές σελίδες. Το `robots.txt` δείχνει στο `https://monomaxos.gr/sitemap.xml` και δεν μπλοκάρει το AdSense.
+
+### Τι γράφει
+- Έλεγχος μοναδικού slug (ευρετήριο + σελίδες) και μοναδικού τίτλου/meta.
+- Id: μέγιστο υπάρχον id (άρθρο ή `featured_media`) + 1. Το `featured_media` παίρνει το επόμενο νούμερο, οπότε τα id άρθρων ανεβαίνουν ανά 2, όπως στο export (π.χ. 12063 / 12064).
+- Shard 100 άρθρων, νεότερο πρώτο. Το `posts-001.json` είναι γεμάτο· το επόμενο άρθρο ανοίγει `posts-041.json`. Το ευρετήριο μένει νεότερο-πρώτο.
+- `link`: `https://monomaxos.gr/{slug}/`.
+- Αν λείπει η αποποίηση, προστίθεται η παράγραφος που ήδη χρησιμοποιούν τα πρόσφατα άρθρα (`<p><em>Αποποίηση ευθύνης: …</em></p>`).
+- Αυξάνει το `count` μόνο της κατηγορίας του άρθρου. Ο γονέας «Υγεία» μένει στο 0, όπως στο export.
+
+### Εικόνες και R2
+Το `lib/media.ts` αλλάζει URL μόνο αν υπάρχει ήδη ως κλειδί στο `content/media-map.json`. Νέα αρχεία **δεν** καταχωρούνται εκεί. Ανέβασε το αρχείο στο R2 στο `wp-content/uploads/...` και δώσε απόλυτο URL (`NEXT_PUBLIC_MEDIA_BASE` + το path). Σχετικό `/wp-content/uploads/...` γίνεται απόλυτο μόνο αν οριστεί `--media-base` ή `NEXT_PUBLIC_MEDIA_BASE`.
+
+### Checklist SEO
+- Μοναδικός τίτλος και μοναδικό meta description (περίπου 50–160 χαρακτήρες).
+- Σώμα με ενότητες `<h2>` (ο τίτλος της σελίδας είναι ήδη το μοναδικό H1).
+- Τουλάχιστον ένας εσωτερικός σύνδεσμος προς σχετικό άρθρο ή κατηγορία του monomaxos.gr.
+- Μοναδικό slug· το script απορρίπτει διπλότυπο.
+- Ρυθμός: 1–2 πρωτότυπα άρθρα την ημέρα. Από το τρίτο την ίδια ημερομηνία το script προειδοποιεί.
+- Featured image με alt. Χωρίς script, iframe ή inline handlers στο HTML.
+
+Το `--dry-run` τυπώνει το άρθρο και τα αρχεία που θα έγραφε, χωρίς να αγγίζει το `content/`. Τρέξτε μία δημοσίευση τη φορά: το script ξαναγράφει ολόκληρο το ευρετήριο.
 
 ## Καθαρισμός περιεχομένου
 `node scripts/clean-content.mjs` — αποκωδικοποιεί HTML entities (κρατά τα `&lt; &gt; &amp; &quot;`) και αφαιρεί αρχικό `<h1>` μόνο αν ταυτίζεται με τον τίτλο. Τα πρωτότυπα σώζονται στο `content-orig/`· επαναφορά με `--restore`. Μετά από νέο export: σβήσε το `content-orig/` και ξανατρέξε το.
