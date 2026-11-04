@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "publish": "node scripts/publish-post.mjs",
+    "publish:check": "node scripts/publish-post.mjs --self-test"
   },
   "dependencies": {
     "he": "^2.0.0",

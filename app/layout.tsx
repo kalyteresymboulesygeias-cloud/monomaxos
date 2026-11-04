@@ -6,6 +6,7 @@ import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import { adSlotVisible, adsenseClient } from "@/lib/ads";
 import { getNavCategories } from "@/lib/content";
+import { SITE_ORIGIN } from "@/lib/site";
 import "./globals.css";
 
 const sans = Source_Sans_3({
@@ -22,7 +23,7 @@ const serif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.monomaxos.gr"),
+  metadataBase: new URL(SITE_ORIGIN),
   title: { default: "Μονομάχος", template: "%s | Μονομάχος" },
   description: "Ενημέρωση για υγεία, διατροφή και ευεξία.",
 };
