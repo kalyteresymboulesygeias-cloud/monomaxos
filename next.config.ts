@@ -5,8 +5,13 @@ const nextConfig: NextConfig = {
   trailingSlash: true, // WordPress URLs end with "/"
   outputFileTracingIncludes: { "/**": ["./content/**/*"] },
   images: {
-    // AVIF when the browser accepts it, otherwise WebP. Sized derivatives
-    // come from /_next/image; the R2 originals stay untouched.
+    // Vercel answers /_next/image with 402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED
+    // on this project, so optimized covers and article photos never load.
+    // Serve the file URL until Image Optimization is on a paid plan.
+    // remotePatterns, formats, and minimumCacheTTL stay: set unoptimized to
+    // false to send traffic through the optimizer again.
+    unoptimized: true,
+    // AVIF when the browser accepts it, otherwise WebP, once unoptimized is false.
     formats: ["image/avif", "image/webp"],
     // Upload filenames are stable. R2 sends no Cache-Control, so without this
     // the optimizer response would keep the 4-hour default and repeat views

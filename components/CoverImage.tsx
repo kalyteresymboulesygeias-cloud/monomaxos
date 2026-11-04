@@ -18,32 +18,39 @@ export default function CoverImage({
   className?: string;
   sizes: string;
 }) {
-  const [failed, setFailed] = useState(false);
   const resolved = src ? upgradeMediaSrc(src) : undefined;
-  const optimized = Boolean(resolved && isOptimizableImageSrc(resolved));
+  // Keyed by src so a reused card does not keep a previous photo's failure.
+  const [optimizerFailedSrc, setOptimizerFailedSrc] = useState<string | undefined>();
+  const [missingSrc, setMissingSrc] = useState<string | undefined>();
+  const optimizerFailed = Boolean(resolved && optimizerFailedSrc === resolved);
+  const missing = Boolean(resolved && missingSrc === resolved);
+  const optimized = Boolean(resolved && isOptimizableImageSrc(resolved) && !optimizerFailed);
 
   return (
     <div className={`relative overflow-hidden bg-sand ${className}`}>
-      {resolved && optimized && !failed ? (
+      {resolved && optimized && !missing ? (
         <Image
           src={resolved}
           alt={alt}
           fill
           sizes={sizes}
-          onError={() => setFailed(true)}
+          // 402 from /_next/image is an image error. Fall through to the file URL
+          // instead of leaving the sand frame empty.
+          onError={() => setOptimizerFailedSrc(resolved)}
           className="object-cover transition duration-700 ease-out group-hover:scale-[1.03]"
           {...(priority
             ? { preload: true, fetchPriority: "high" as const }
             : { loading: "lazy" as const })}
         />
-      ) : resolved && !optimized && !failed ? (
+      ) : resolved && !missing ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={resolved}
           alt={alt}
+          sizes={sizes}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
-          onError={() => setFailed(true)}
+          onError={() => setMissingSrc(resolved)}
           className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.03]"
         />
       ) : null}
