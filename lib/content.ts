@@ -16,7 +16,7 @@ export type Page = { id: number; slug: string; title: { rendered: string }; cont
 
 let _cats: Category[] | null = null, _idx: IndexItem[] | null = null;
 export const decode = (s: string) => heDecode(s);
-export function getCategories() { return (_cats ??= read<Category[]>("categories.json").map(c => ({ ...c, name: decode(c.name) }))); }
+export function getCategories() { return (_cats ??= read<Category[]>("categories.json").map(c => ({ ...c, name: decode(c.name), description: c.description == null ? c.description : decode(c.description) }))); }
 export function getNavCategories() { return getCategories().filter(c => c.parent === 0 && c.count > 0); }
 export function getCategory(slug: string) { return getCategories().find(c => c.slug === slug); }
 export function getIndex() { return (_idx ??= read<IndexItem[]>("posts-index.json").map(p => ({ ...p, title: decode(p.title) }))); }

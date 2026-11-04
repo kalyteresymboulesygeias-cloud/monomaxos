@@ -589,6 +589,34 @@ function selfTest() {
   );
   assert.equal(slugify("Τριχόπτωση στις Γυναίκες: Σίδηρος, Θυρεοειδής & Εμμηνόπαυση"), "trichoptosi-stis-gynaikes-sidiros-thyreoeidis-emminopaysi");
 
+  const catalog = readJson(path.join(defaultContentDir(), "categories.json"));
+  const editorial = [
+    {
+      id: 406,
+      slug: "eortologio",
+      name: "Εορτολόγιο",
+      description: "Ποιοι γιορτάζουν σήμερα και τις επόμενες μέρες. Ορθόδοξο εορτολόγιο με ονόματα και σύντομες σημειώσεις.",
+    },
+    {
+      id: 407,
+      slug: "zodia-simera",
+      name: "Ζώδια σήμερα",
+      description: "Ημερήσιες προβλέψεις για όλα τα ζώδια. Ψυχαγωγικό περιεχόμενο, όχι απόλυτη πρόβλεψη.",
+    },
+  ];
+  const catalogIds = catalog.map((category) => category.id);
+  assert.equal(new Set(catalogIds).size, catalogIds.length);
+  for (const expected of editorial) {
+    const match = catalog.find((category) => category.slug === expected.slug);
+    assert.ok(match, expected.slug);
+    assert.equal(match.id, expected.id);
+    assert.equal(match.name, expected.name);
+    assert.equal(match.parent, 0);
+    assert.equal(match.description, expected.description);
+    assert.equal(resolveCategories({ category: expected.slug }, catalog).ids[0], expected.id);
+    assert.equal(resolveCategories({ category_id: String(expected.id) }, catalog).ids[0], expected.id);
+  }
+
   const body = [
     "<h2>Γιατί έχει σημασία</h2>",
     "<p>Ένας σύντομος περίπατος μετά το γεύμα είναι μια απλή συνήθεια που πολλοί εντάσσουν στη μέρα τους όταν θέλουν πιο σταθερή ενέργεια το απόγευμα. Δεν αντικαθιστά γεύμα, φάρμακο ή εξέταση.</p>",
