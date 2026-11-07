@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
 import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import AdSlot from "@/components/AdSlot";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const nav = getNavCategories();
   return (
     <html lang="el" className={`${sans.variable} ${serif.variable}`}>
+      <GoogleTagManager gtmId="GTM-NSH3BN3V" />
       <body className="bg-paper text-ink antialiased">
         {ADSENSE ? (
           <Script
