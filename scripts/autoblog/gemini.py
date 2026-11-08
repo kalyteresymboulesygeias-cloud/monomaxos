@@ -1,6 +1,7 @@
 """google-genai wrapper: structured output, bounded retries, fallback model, call accounting."""
 from __future__ import annotations
 
+import sys
 import time
 from typing import Literal, TypeVar
 
@@ -73,6 +74,14 @@ def _retryable(exc: Exception) -> bool:
     return isinstance(exc, (httpx.TimeoutException, TimeoutError, httpx.TransportError))
 
 
+def _describe(exc: Exception | None) -> str:
+    if exc is None:
+        return "unknown"
+    code = getattr(exc, "code", "") or ""
+    detail = " ".join(str(exc).split())[:300]
+    return f"{type(exc).__name__} {code} {detail}".strip()
+
+
 class Gemini:
     def __init__(self, budget: Budget, client=None):
         self.model = config.env("GEMINI_MODEL")
@@ -120,8 +129,9 @@ class Gemini:
                 if not _retryable(exc):
                     raise GenerationError(f"Gemini error: {type(exc).__name__} {getattr(exc, 'code', '')}") from None
                 last = exc
+                print(f"[gemini] {model} attempt {attempt + 1}: {_describe(exc)}", file=sys.stderr)
                 time.sleep(2 ** (attempt + 1))
-        raise _Exhausted(type(last).__name__)
+        raise _Exhausted(_describe(last))
 
     def generate(self, system: str, prompt: str, schema: type[T]) -> T:
         try:
