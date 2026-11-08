@@ -107,6 +107,18 @@ class NegativeChecks(unittest.TestCase):
         self.assertNotIn("<h1", html)
 
 
+class SourceUrls(unittest.TestCase):
+    def test_only_source_domain_is_followed(self):
+        from autoblog.sources import same_site
+        base = "https://www.okmag.gr/lifestyle/"
+        self.assertTrue(same_site("https://www.okmag.gr/a/b", base))
+        self.assertTrue(same_site("https://m.okmag.gr/a", base))
+        self.assertFalse(same_site("http://169.254.169.254/latest/meta-data", base))
+        self.assertFalse(same_site("https://okmag.gr.evil.com/a", base))
+        self.assertFalse(same_site("file:///etc/passwd", base))
+        self.assertFalse(same_site("https://www.okmag.gr:8080/a", base))
+
+
 class EndToEnd(unittest.TestCase):
     def test_switch_off_does_nothing(self):
         os.environ["AUTO_BLOG_ENABLED"] = "false"

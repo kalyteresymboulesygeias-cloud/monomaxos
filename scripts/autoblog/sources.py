@@ -81,6 +81,13 @@ def _when(value) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def same_site(url: str, base: str) -> bool:
+    """Only follow http(s) links on the source's own domain (no internal hosts, no redirects elsewhere)."""
+    parts, root = urlparse(url), urlparse(base).netloc.lower().removeprefix("www.")
+    host = (parts.hostname or "").lower()
+    return parts.scheme in ("http", "https") and parts.port is None and (host == root or host.endswith("." + root))
+
+
 def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list[dict], list[str]]:
     """Return (items from the last 48h, source errors)."""
     cutoff = now - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
@@ -107,7 +114,7 @@ def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list
                     title = a.get_text(" ", strip=True)
                     if len(title) > 25:
                         found.append({"site": source["name"], "title": title, "url": urljoin(source["list_url"], a["href"]), "date": None, "summary": ""})
-            items += [i for i in found if i["url"] and (i["date"] is None or i["date"] >= cutoff)]
+            items += [i for i in found if i["url"] and same_site(i["url"], source["list_url"]) and (i["date"] is None or i["date"] >= cutoff)]
         except SourceError as exc:
             problems.append(str(exc))
     return items, problems
@@ -127,9 +134,14 @@ def cluster(items: list[dict], covered_titles: list[str], threshold: float = 0.4
     return sorted(fresh, key=lambda g: (-len({i["site"] for i in g}), -len(g)))
 
 
-def article_text(fetcher: Fetcher, url: str) -> str:
+def article_text(fetcher: Fetcher, url: str) -> tuple[str, datetime | None]:
+    """Paragraph text (memory only) and the page's published time, if it declares one."""
     soup = BeautifulSoup(fetcher.get(url, cache=False), "html.parser")
+    meta = soup.find("meta", attrs={"property": "article:published_time"}) or soup.find("meta", attrs={"itemprop": "datePublished"})
+    published = _when(meta.get("content")) if meta else None
+    if published is None and (tag := soup.find("time", attrs={"datetime": True})):
+        published = _when(tag["datetime"])
     for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
         tag.decompose()
     body = soup.find("article") or soup.body or soup
-    return " ".join(p.get_text(" ", strip=True) for p in body.find_all("p"))[:12000]
+    return " ".join(p.get_text(" ", strip=True) for p in body.find_all("p"))[:12000], published

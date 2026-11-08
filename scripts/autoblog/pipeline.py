@@ -106,12 +106,17 @@ class Runner:
                 raise Skip("κανένα θέμα δεν καλύπτεται από ≥2 διαφορετικά sites")
             chosen = groups[slot]
             texts, used = [], []
+            cutoff = util.now_athens() - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
             for item in {i["site"]: i for i in chosen}.values():
                 try:
-                    texts.append(sources.article_text(fetcher, item["url"]))
-                    used.append(item["url"])
+                    text, published = sources.article_text(fetcher, item["url"])
                 except sources.SourceError:
                     continue
+                when = item["date"] or published
+                if when is None or when < cutoff:
+                    continue
+                texts.append(text)
+                used.append(item["url"])
             if len(texts) < 2:
                 raise sources.SourceError("δεν κατέβηκαν κείμενα από ≥2 sites")
             plan["topic"] = chosen[0]["title"]
