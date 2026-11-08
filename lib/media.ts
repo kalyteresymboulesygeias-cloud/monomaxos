@@ -39,7 +39,8 @@ export function mediaUrl(u: string | null | undefined): string | undefined;
 export function mediaUrl(u: string | null | undefined) {
   if (!u) return undefined;
   const rel = getMap()[norm(u)];
-  if (rel) return rel.startsWith(`${UPLOADS}/`) ? MEDIA_PROXY + rel.slice(UPLOADS.length) : rel;
+  // Empty BASE serves migrated uploads from /public, so only R2-backed paths go through /media.
+  if (rel) return BASE && rel.startsWith(`${UPLOADS}/`) ? MEDIA_PROXY + rel.slice(UPLOADS.length) : rel;
   return proxied(u);
 }
 export function rewriteMedia(html: string) {
