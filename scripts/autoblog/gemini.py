@@ -51,6 +51,22 @@ def check_model_name(name: str, label: str) -> None:
         raise SystemExit(f"{label}={name} is not a stable model. Use a stable model name.")
 
 
+def _stable_models_hint(client=None) -> str:
+    """Names of stable models that support generateContent, to help pick GEMINI_MODEL."""
+    try:
+        client = client or genai.Client(api_key=config.env("GEMINI_API_KEY"))
+        names = sorted(
+            m.name.removeprefix("models/")
+            for m in client.models.list()
+            if "generateContent" in (m.supported_actions or [])
+            and m.name.removeprefix("models/").startswith("gemini-")
+            and not any(tag in m.name for tag in ("-preview", "-exp", "-latest"))
+        )
+    except Exception:
+        return ""
+    return "Stable models for this key: " + ", ".join(names) if names else ""
+
+
 def _retryable(exc: Exception) -> bool:
     if isinstance(exc, errors.APIError):
         return exc.code == 429 or (exc.code or 0) >= 500
@@ -61,6 +77,8 @@ class Gemini:
     def __init__(self, budget: Budget, client=None):
         self.model = config.env("GEMINI_MODEL")
         self.fallback = config.env("GEMINI_FALLBACK_MODEL")
+        if not self.model and client is None and config.env("GEMINI_API_KEY"):
+            raise SystemExit(f"GEMINI_MODEL is empty. Set it as a GitHub Actions variable. {_stable_models_hint()}")
         check_model_name(self.model, "GEMINI_MODEL")
         if self.fallback:
             check_model_name(self.fallback, "GEMINI_FALLBACK_MODEL")
@@ -77,7 +95,7 @@ class Gemini:
             available = {m.name.removeprefix("models/") for m in client.models.list()}
             for name in filter(None, (self.model, self.fallback)):
                 if name not in available:
-                    raise SystemExit(f"Gemini model {name} is not available for this API key")
+                    raise SystemExit(f"Gemini model {name} is not available for this API key. {_stable_models_hint(client)}")
         self.client = client
 
     def _config(self, system: str, schema) -> types.GenerateContentConfig:
