@@ -70,7 +70,9 @@ def _stable_models_hint(client=None) -> str:
 
 def _retryable(exc: Exception) -> bool:
     if isinstance(exc, errors.APIError):
-        return exc.code == 429 or (exc.code or 0) >= 500
+        if exc.code == 429:
+            return "per day" not in str(exc).lower()
+        return (exc.code or 0) >= 500
     return isinstance(exc, (httpx.TimeoutException, TimeoutError, httpx.TransportError))
 
 
