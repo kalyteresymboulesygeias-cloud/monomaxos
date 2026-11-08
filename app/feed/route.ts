@@ -7,12 +7,30 @@ export const dynamic = "force-static";
 const xml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
+const athensParts = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Athens",
+  hourCycle: "h23",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+function athensOffsetMs(instant: number) {
+  const parts = Object.fromEntries(athensParts.formatToParts(instant).map((p) => [p.type, p.value]));
+  const wall = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+  return wall - instant;
+}
+
 /** Content dates are Athens wall-clock time without an offset. */
 function rfc822(stamp: string) {
   const [day, time = "00:00:00"] = stamp.split("T");
-  const month = Number(day.slice(5, 7));
-  const offset = month >= 4 && month <= 10 ? "+03:00" : "+02:00";
-  return new Date(`${day}T${time}${offset}`).toUTCString();
+  const wall = Date.parse(`${day}T${time}Z`);
+  let instant = wall - athensOffsetMs(wall);
+  instant = wall - athensOffsetMs(instant);
+  return new Date(instant).toUTCString();
 }
 
 export function GET() {
