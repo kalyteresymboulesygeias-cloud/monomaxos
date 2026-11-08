@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { eortologioRedirects } from "./lib/eortologio";
 import { imageRemotePatterns } from "./lib/images";
+import { MEDIA_PROXY, R2_ORIGIN } from "./lib/media";
 
 const nextConfig: NextConfig = {
   trailingSlash: true, // WordPress URLs end with "/"
@@ -24,6 +25,18 @@ const nextConfig: NextConfig = {
   // Yearly nameday posts point to the permanent date page once it exists.
   async redirects() {
     return eortologioRedirects();
+  },
+  // Some Greek mobile networks refuse *.r2.dev, so uploads are proxied same-origin.
+  async rewrites() {
+    return [{ source: `${MEDIA_PROXY}/:path*`, destination: `${R2_ORIGIN}/wp-content/uploads/:path*` }];
+  },
+  async headers() {
+    return [
+      {
+        source: `${MEDIA_PROXY}/:path*`,
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
   },
   turbopack: {
     rules: {
