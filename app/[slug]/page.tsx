@@ -118,27 +118,21 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
                 sizes={IMAGE_SIZES.article}
                 className="aspect-[16/9] rounded-2xl"
               />
-              {label.caption || credit ? (
+              {credit ? (
                 <figcaption className="mt-2 text-sm text-muted">
-                  {label.caption}
-                  {label.caption && credit ? " · " : null}
-                  {credit ? (
-                    <>
-                      Φωτογραφία:{" "}
-                      <a href={credit.url} rel="nofollow noopener" target="_blank" className="underline hover:text-pine">
-                        {credit.name}
-                      </a>{" "}
-                      /{" "}
-                      <a
-                        href="https://unsplash.com/?utm_source=monomaxos&utm_medium=referral"
-                        rel="nofollow noopener"
-                        target="_blank"
-                        className="underline hover:text-pine"
-                      >
-                        Unsplash
-                      </a>
-                    </>
-                  ) : null}
+                  Φωτογραφία:{" "}
+                  <a href={credit.url} rel="nofollow noopener" target="_blank" className="underline hover:text-pine">
+                    {credit.name}
+                  </a>{" "}
+                  /{" "}
+                  <a
+                    href="https://unsplash.com/?utm_source=monomaxos&utm_medium=referral"
+                    rel="nofollow noopener"
+                    target="_blank"
+                    className="underline hover:text-pine"
+                  >
+                    Unsplash
+                  </a>
                 </figcaption>
               ) : null}
             </figure>
