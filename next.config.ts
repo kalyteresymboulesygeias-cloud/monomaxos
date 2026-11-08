@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { eortologioRedirects } from "./lib/eortologio";
 import { imageRemotePatterns } from "./lib/images";
 
 const nextConfig: NextConfig = {
@@ -19,6 +20,10 @@ const nextConfig: NextConfig = {
     // by uploading a new name (WordPress already does).
     minimumCacheTTL: 31536000,
     remotePatterns: imageRemotePatterns(),
+  },
+  // Yearly nameday posts point to the permanent date page once it exists.
+  async redirects() {
+    return eortologioRedirects();
   },
   turbopack: {
     rules: {

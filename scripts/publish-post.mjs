@@ -41,8 +41,16 @@ const BANNED_KEYS = [
   "canonical_source",
   "canonicalSource",
 ];
-const DISCLAIMER =
-  "<p><em>Αποποίηση ευθύνης: Αυτό το άρθρο έχει αποκλειστικά εκπαιδευτικό και ενημερωτικό χαρακτήρα. Δεν αποτελεί ιατρική συμβουλή. Πάντα να συμβουλεύεστε τον γιατρό σας πριν από οποιαδήποτε αλλαγή στη διατροφή, στη λήψη συμπληρωμάτων ή στον τρόπο ζωής σας — ιδιαίτερα εάν λαμβάνετε φάρμακα ή έχετε χρόνιες παθήσεις.</em></p>";
+const MEDICAL_DISCLAIMER_TEXT =
+  "Αποποίηση ευθύνης: Αυτό το άρθρο έχει αποκλειστικά εκπαιδευτικό και ενημερωτικό χαρακτήρα. Δεν αποτελεί ιατρική συμβουλή. Πάντα να συμβουλεύεστε τον γιατρό σας πριν από οποιαδήποτε αλλαγή στη διατροφή, στη λήψη συμπληρωμάτων ή στον τρόπο ζωής σας, ιδιαίτερα εάν λαμβάνετε φάρμακα ή έχετε χρόνιες παθήσεις.";
+const ENTERTAINMENT_DISCLAIMER_TEXT =
+  "Τα ζώδια έχουν ψυχαγωγικό χαρακτήρα. Δεν αποτελούν πρόβλεψη και δεν αντικαθιστούν συμβουλή γιατρού, οικονομικού συμβούλου ή άλλου ειδικού.";
+const DISCLAIMER = `<p><em>${MEDICAL_DISCLAIMER_TEXT}</em></p>`;
+const DISCLAIMERS = {
+  medical: { html: DISCLAIMER, present: /αποποίηση ευθύνης|δεν αντικαθιστά την ιατρική συμβουλή/i },
+  entertainment: { html: `<p><em>${ENTERTAINMENT_DISCLAIMER_TEXT}</em></p>`, present: /ψυχαγωγικό χαρακτήρα\. Δεν αποτελούν πρόβλεψη/i },
+  none: null,
+};
 const GREEK = {
   α: "a", ά: "a", β: "v", γ: "g", δ: "d", ε: "e", έ: "e", ζ: "z", η: "i", ή: "i",
   θ: "th", ι: "i", ί: "i", ϊ: "i", ΐ: "i", κ: "k", λ: "l", μ: "m", ν: "n", ξ: "x",
@@ -239,11 +247,32 @@ function ensureHtml(value) {
     .join("\n");
 }
 
-function withDisclaimer(html) {
-  if (/αποποίηση ευθύνης|δεν αντικαθιστά την ιατρική συμβουλή/i.test(html)) {
-    return { html, added: false };
+function resolveDisclaimer(value) {
+  const kind = value == null || value === "" ? "medical" : String(value);
+  if (!Object.hasOwn(DISCLAIMERS, kind)) fail('disclaimer must be "medical", "entertainment" or "none"');
+  return kind;
+}
+
+function withDisclaimer(html, kind = "medical") {
+  const disclaimer = DISCLAIMERS[kind];
+  if (!disclaimer || disclaimer.present.test(html)) return { html, added: false };
+  return { html: `${html}\n${disclaimer.html}`, added: true };
+}
+
+function resolveCredit(credit) {
+  if (credit == null) return undefined;
+  if (typeof credit !== "object" || Array.isArray(credit)) fail("featured_image.credit must be an object with name and url");
+  const name = stripHtml(String(credit.name ?? "")).trim();
+  const url = String(credit.url ?? "").trim();
+  if (!name) fail("featured_image.credit.name is required");
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    fail("featured_image.credit.url must be an absolute https URL");
   }
-  return { html: `${html}\n${DISCLAIMER}`, added: true };
+  if (parsed.protocol !== "https:") fail("featured_image.credit.url must be an absolute https URL");
+  return { name, url: parsed.href };
 }
 
 function toExcerpt(input, html) {
@@ -406,11 +435,19 @@ export function publishArticle(payload, options = {}) {
   const modified = payload.modified ? String(payload.modified) : date;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(modified)) fail("modified must look like 2026-11-04T18:30:00");
 
-  const { html, added: disclaimerAdded } = withDisclaimer(content);
+  const disclaimerKind = resolveDisclaimer(payload.disclaimer);
+  const { html, added: disclaimerAdded } = withDisclaimer(content, disclaimerKind);
+  const credit = resolveCredit(payload.featured_image?.credit ?? payload.image_credit);
   const excerpt = toExcerpt(payload.excerpt, content);
   const id = scanned.maxId + 1;
   const featuredMedia = id + 1;
-  const featuredImage = { url: image.url, alt, ...(width ? { width } : {}), ...(height ? { height } : {}) };
+  const featuredImage = {
+    url: image.url,
+    alt,
+    ...(width ? { width } : {}),
+    ...(height ? { height } : {}),
+    ...(credit ? { credit } : {}),
+  };
   const post = {
     id,
     slug,
@@ -434,6 +471,7 @@ export function publishArticle(payload, options = {}) {
     categories: ids,
     image: featuredImage.url,
     file: "",
+    modified,
   };
 
   const shard = chooseShard(index, postsDir);
@@ -501,6 +539,77 @@ export function publishArticle(payload, options = {}) {
   };
 }
 
+export function updateArticle(payload, options = {}) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) fail("payload must be a JSON object");
+  for (const key of BANNED_KEYS) {
+    if (payload[key]) fail(`refusing "${key}": publish original Greek writing, not a scraped or rewritten article`);
+  }
+  if (payload.original !== true) fail('Set "original": true to confirm this article is original Greek writing.');
+  const slug = String(options.slug ?? payload.slug ?? "").trim();
+  if (!slug) fail("--update needs --slug");
+  const contentDir = options.contentDir ?? defaultContentDir();
+  const postsDir = path.join(contentDir, "posts");
+  const indexPath = path.join(contentDir, "posts-index.json");
+  const index = readJson(indexPath);
+  const item = index.find((entry) => entry.slug === slug);
+  if (!item) fail(`slug "${slug}" does not exist`);
+  const shardPath = path.join(postsDir, item.file);
+  const posts = readJson(shardPath);
+  const post = posts.find((entry) => entry.slug === slug);
+  if (!post) fail(`slug "${slug}" is missing from ${item.file}`);
+
+  const content = ensureHtml(payload.content ?? payload.html ?? payload.body ?? payload.content_html);
+  const plain = stripHtml(content);
+  if (!hasGreek(plain)) fail("body must be Greek");
+  if (plain.length < 400) fail("body is too short (minimum 400 characters of text)");
+  const meta = textField(payload.meta_description ?? payload.metaDescription ?? payload.description, "meta_description");
+  if (meta.length > 300) fail("meta_description is longer than 300 characters");
+  const scanned = scanShards(postsDir, []);
+  if (normText(meta) !== normText(post.meta_description || "") && scanned.metas.has(normText(meta))) {
+    fail("meta_description duplicates an existing post");
+  }
+  const modified = payload.modified ? String(payload.modified) : athensStamp(options.now ?? new Date());
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(modified)) fail("modified must look like 2026-11-04T18:30:00");
+
+  if (payload.title != null) {
+    const title = textField(payload.title, "title");
+    if (title.length > 180) fail("title is longer than 180 characters");
+    if (!hasGreek(title)) fail("title must be Greek");
+    const titleKey = normText(title);
+    if (index.some((entry) => entry.slug !== slug && normText(entry.title) === titleKey)) fail(`title already exists: ${title}`);
+    post.title = { rendered: title };
+    item.title = title;
+  }
+
+  const { html, added } = withDisclaimer(content, resolveDisclaimer(payload.disclaimer));
+  post.content = { rendered: html };
+  post.excerpt = { rendered: toExcerpt(payload.excerpt, content) };
+  post.meta_description = meta;
+  post.modified = modified;
+  const imageInput = payload.featured_image?.url ?? payload.image ?? payload.image_url;
+  if (imageInput) {
+    const alt = textField(payload.featured_image?.alt ?? payload.image_alt ?? payload.alt, "image alt");
+    const image = resolveImageUrl(imageInput, resolveMediaBase(options, options.cwd ?? process.cwd()));
+    const width = positiveInt(payload.featured_image?.width ?? payload.image_width, "image width");
+    const height = positiveInt(payload.featured_image?.height ?? payload.image_height, "image height");
+    const credit = resolveCredit(payload.featured_image?.credit ?? payload.image_credit);
+    post.featured_image = {
+      url: image.url,
+      alt,
+      ...(width ? { width } : {}),
+      ...(height ? { height } : {}),
+      ...(credit ? { credit } : {}),
+    };
+    item.image = image.url;
+  }
+  item.modified = modified;
+  if (!options.dryRun) {
+    writeJson(shardPath, posts);
+    writeJson(indexPath, index);
+  }
+  return { ok: true, updated: true, dry_run: Boolean(options.dryRun), slug, id: post.id, date: post.date, modified, file: item.file, disclaimer_added: added, post };
+}
+
 function parseArgs(argv) {
   const out = { dryRun: false, selfTest: false, strict: false, help: false };
   for (let i = 0; i < argv.length; i += 1) {
@@ -512,10 +621,13 @@ function parseArgs(argv) {
     else if (arg === "--file" || arg === "-f") out.file = argv[++i];
     else if (arg === "--content") out.content = argv[++i];
     else if (arg === "--media-base") out.mediaBase = argv[++i];
+    else if (arg === "--update") out.update = true;
+    else if (arg === "--slug") out.slug = argv[++i];
+    else if (arg === "--slugify") out.slugify = argv[++i];
     else if (arg.startsWith("--")) fail(`unknown option ${arg}`);
     else if (!out.file) out.file = arg;
     else fail(`unexpected argument ${arg}`);
-    if ((arg === "--file" || arg === "-f" || arg === "--content" || arg === "--media-base") && argv[i] == null) {
+    if ((arg === "--file" || arg === "-f" || arg === "--content" || arg === "--media-base" || arg === "--slug" || arg === "--slugify") && argv[i] == null) {
       fail(`${arg} needs a value`);
     }
   }
@@ -524,6 +636,8 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage: node scripts/publish-post.mjs [--dry-run] [--strict] [--file article.json] [--content content] [--media-base URL]
+       node scripts/publish-post.mjs --update --slug <slug> [--dry-run] --file article.json
+       node scripts/publish-post.mjs --slugify "<Greek text>"
        node scripts/publish-post.mjs --self-test
 
 Reads a JSON article from --file or stdin. --dry-run prints the post and the files it would write.
@@ -745,6 +859,44 @@ function selfTest() {
   );
   assert.ok(backdated.index_position > 0);
 
+  assert.equal(DISCLAIMER.includes("\u2014"), false);
+  const zodia = publishArticle(
+    { ...payload, slug: "zodia-dokimi", title: "Ζώδια δοκιμής με ψυχαγωγική σημείωση", meta_description: "Ψυχαγωγική δοκιμή ζωδίων χωρίς ιατρική αποποίηση στο τέλος του κειμένου.", disclaimer: "entertainment" },
+    { contentDir: root, dryRun: true, mediaBase: "https://media.example.test" },
+  );
+  assert.match(zodia.post.content.rendered, /ψυχαγωγικό χαρακτήρα/);
+  assert.doesNotMatch(zodia.post.content.rendered, /Αποποίηση ευθύνης/);
+  const plainDay = publishArticle(
+    { ...payload, slug: "xoris-dilosi", title: "Εορτολόγιο δοκιμής χωρίς καμία σημείωση", meta_description: "Δοκιμή εορτολογίου χωρίς αποποίηση ευθύνης στο τέλος του κειμένου.", disclaimer: "none" },
+    { contentDir: root, dryRun: true, mediaBase: "https://media.example.test" },
+  );
+  assert.equal(plainDay.disclaimer_added, false);
+  assert.throws(() => publishArticle({ ...payload, slug: "lathos", title: "Άρθρο με λάθος τύπο σημείωσης", meta_description: "Μοναδική περιγραφή για τη δοκιμή με λάθος τύπο σημείωσης στο τέλος.", disclaimer: "legal" }, { contentDir: root, dryRun: true, mediaBase: "x" }), /disclaimer/);
+  const credited = publishArticle(
+    {
+      ...payload,
+      slug: "me-credit",
+      title: "Άρθρο με φωτογραφία από το Unsplash",
+      meta_description: "Δοκιμή που κρατά το credit του φωτογράφου μαζί με την κεντρική εικόνα.",
+      featured_image: { url: "https://images.unsplash.com/photo-1?ixid=abc", alt: "Φωτογραφία", width: 1080, height: 720, credit: { name: "Jane Doe", url: "https://unsplash.com/@jane?utm_source=monomaxos&utm_medium=referral" } },
+    },
+    { contentDir: root, dryRun: true, mediaBase: "https://media.example.test" },
+  );
+  assert.equal(credited.post.featured_image.credit.name, "Jane Doe");
+  assert.throws(() => publishArticle({ ...payload, slug: "kako-credit", title: "Άρθρο με λάθος σύνδεσμο φωτογράφου", meta_description: "Μοναδική περιγραφή για τη δοκιμή με λάθος σύνδεσμο φωτογράφου εικόνας.", featured_image: { url: "https://images.unsplash.com/x", alt: "x", credit: { name: "A", url: "http://x" } } }, { contentDir: root, dryRun: true, mediaBase: "x" }), /credit/);
+  assert.equal(readJson(path.join(root, "posts-index.json"))[0].modified, written.date);
+  const updated = updateArticle(
+    { original: true, content: `${body}\n<p>Νέα χρονιά.</p>`, meta_description: "Ανανεωμένη περιγραφή για το ίδιο άρθρο που ενημερώθηκε τη νέα χρονιά.", modified: "2027-11-04T09:00:00" },
+    { contentDir: root, slug: written.slug, mediaBase: "https://media.example.test" },
+  );
+  assert.equal(updated.id, written.id);
+  assert.equal(updated.date, written.date);
+  const afterUpdate = readJson(path.join(postsDir, "posts-001.json")).find((entry) => entry.slug === written.slug);
+  assert.equal(afterUpdate.modified, "2027-11-04T09:00:00");
+  assert.match(afterUpdate.content.rendered, /Νέα χρονιά/);
+  assert.equal(readJson(path.join(root, "posts-index.json")).find((entry) => entry.slug === written.slug).modified, "2027-11-04T09:00:00");
+  assert.throws(() => updateArticle({ original: true, content: body, meta_description: "x" }, { contentDir: root, slug: "den-yparxei" }), /does not exist/);
+
   fs.rmSync(root, { recursive: true, force: true });
   fs.rmSync(fullRoot, { recursive: true, force: true });
   console.log("self-test ok");
@@ -760,12 +912,18 @@ function main() {
     selfTest();
     return;
   }
+  if (args.slugify != null) {
+    console.log(slugify(args.slugify));
+    return;
+  }
   if (!args.file && process.stdin.isTTY) {
     printHelp();
     fail("pass --file or pipe JSON on stdin");
   }
   const payload = readPayload(args.file);
-  const result = publishArticle(payload, {
+  const run = args.update ? updateArticle : publishArticle;
+  const result = run(payload, {
+    slug: args.slug,
     dryRun: args.dryRun,
     strict: args.strict,
     contentDir: args.content ? path.resolve(args.content) : undefined,

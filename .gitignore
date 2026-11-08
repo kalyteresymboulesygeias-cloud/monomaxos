@@ -46,3 +46,7 @@ next-env.d.ts
 
 /content-orig
 
+
+# auto-blog pipeline
+scripts/state/cache/
+__pycache__/
