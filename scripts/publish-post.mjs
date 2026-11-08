@@ -571,6 +571,16 @@ export function updateArticle(payload, options = {}) {
   const modified = payload.modified ? String(payload.modified) : athensStamp(options.now ?? new Date());
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(modified)) fail("modified must look like 2026-11-04T18:30:00");
 
+  if (payload.title != null) {
+    const title = textField(payload.title, "title");
+    if (title.length > 180) fail("title is longer than 180 characters");
+    if (!hasGreek(title)) fail("title must be Greek");
+    const titleKey = normText(title);
+    if (index.some((entry) => entry.slug !== slug && normText(entry.title) === titleKey)) fail(`title already exists: ${title}`);
+    post.title = { rendered: title };
+    item.title = title;
+  }
+
   const { html, added } = withDisclaimer(content, resolveDisclaimer(payload.disclaimer));
   post.content = { rendered: html };
   post.excerpt = { rendered: toExcerpt(payload.excerpt, content) };
