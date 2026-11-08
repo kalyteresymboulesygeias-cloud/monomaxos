@@ -56,7 +56,7 @@ class Runner:
         plan["date"] = util.stamp(when)
         today = util.greek_date(self.day)
         if kind == "eortologio":
-            if config.env("AUTO_BLOG_ENABLED_EORTOLOGIO") != "true":
+            if config.env("AUTO_BLOG_ENABLED_EORTOLOGIO") != "true" and not self.dry:
                 raise Skip("AUTO_BLOG_ENABLED_EORTOLOGIO δεν είναι true (τα δεδομένα εορτολογίου θέλουν έλεγχο)")
             if self.ctx.on_date(406, self.day):
                 raise Skip("υπάρχει ήδη άρθρο εορτολογίου για σήμερα")
