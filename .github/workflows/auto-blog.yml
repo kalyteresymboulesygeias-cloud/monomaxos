@@ -21,6 +21,10 @@ on:
         description: "Generate and validate only (no commit, no push)"
         type: boolean
         default: true
+      date:
+        description: "Dry-run only: article date YYYY-MM-DD (default: today, Athens)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -88,13 +92,15 @@ jobs:
           fi
       - name: Generate
         id: gen
+        env:
+          DRY_DATE: ${{ inputs.date }}
         run: |
           set -euo pipefail
           today=$(TZ=Europe/Athens date +%F)
           pr_branch=""
           for t in ${{ steps.plan.outputs.types }}; do
             if [ "${{ steps.plan.outputs.dry }}" = "true" ]; then
-              python scripts/generate_articles.py --type "$t" --count "${{ steps.plan.outputs.count }}" --dry-run
+              python scripts/generate_articles.py --type "$t" --count "${{ steps.plan.outputs.count }}" --dry-run ${DRY_DATE:+--date "$DRY_DATE"}
               continue
             fi
             if { [ "$t" = health ] || [ "$t" = nutrition ]; } && [ "$PUBLISH_MODE_HEALTH" = pr ]; then

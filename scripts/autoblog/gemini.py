@@ -78,7 +78,7 @@ def _describe(exc: Exception | None) -> str:
     if exc is None:
         return "unknown"
     code = getattr(exc, "code", "") or ""
-    detail = " ".join(str(exc).split())[:300]
+    detail = " ".join(str(exc).split())[:900]
     return f"{type(exc).__name__} {code} {detail}".strip()
 
 
