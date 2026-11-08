@@ -16,6 +16,23 @@ function getMap() {
   return _map;
 }
 const BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE || "").replace(/\/$/, "");
+const UPLOADS = "/wp-content/uploads";
+/** Some mobile networks refuse *.r2.dev, so R2 files are served same-origin via the /media rewrite. */
+const BUCKET_R2_DEV = "https://pub-6eb02a9bf9ab4841b691105e6721ab5e.r2.dev";
+export const R2_ORIGIN = BASE || BUCKET_R2_DEV;
+export const MEDIA_PROXY = "/media";
+const R2_URL = /https:\/\/pub-[a-z0-9]+\.r2\.dev\/wp-content\/uploads\/[^\s"'<>),]+/g;
+
+function proxied(u: string) {
+  try {
+    const url = new URL(u);
+    const bucket = url.origin === BUCKET_R2_DEV || url.origin === new URL(R2_ORIGIN).origin;
+    if (bucket && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
+  } catch {
+    /* not an absolute URL */
+  }
+  return u;
+}
 const safeDecode = (u: string) => { try { return decodeURI(u); } catch { return u; } };
 const norm = (u: string) => safeDecode(u.replace(/^http:/, "https:").replace("://monomaxos", "://www.monomaxos"));
 
@@ -24,9 +41,12 @@ export function mediaUrl(u: string | null | undefined): string | undefined;
 export function mediaUrl(u: string | null | undefined) {
   if (!u) return undefined;
   const rel = getMap()[norm(u)];
-  return rel ? BASE + rel : u;
+  // Empty BASE serves migrated uploads from /public, so only R2-backed paths go through /media.
+  if (rel) return BASE && rel.startsWith(`${UPLOADS}/`) ? MEDIA_PROXY + rel.slice(UPLOADS.length) : rel;
+  return proxied(u);
 }
 export function rewriteMedia(html: string) {
-  if (!Object.keys(getMap()).length) return html;
-  return html.replace(/https?:\/\/(?:www\.)?monomaxos\.gr\/wp-content\/uploads\/[^\s"'<>),]+/g, (m) => mediaUrl(m) ?? m);
+  return html
+    .replace(/https?:\/\/(?:www\.)?monomaxos\.gr\/wp-content\/uploads\/[^\s"'<>),]+/g, (m) => mediaUrl(m) ?? m)
+    .replace(R2_URL, proxied);
 }

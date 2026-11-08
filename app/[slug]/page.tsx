@@ -69,7 +69,7 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
       datePublished: post.date,
       dateModified: post.modified || post.date,
       mainEntityOfPage: url,
-      image: image ? [image] : undefined,
+      image: image ? [new URL(image, SITE_ORIGIN).href] : undefined,
       inLanguage: "el",
       publisher: { "@type": "Organization", name: "monomaxos.gr", url: SITE_ORIGIN },
     },

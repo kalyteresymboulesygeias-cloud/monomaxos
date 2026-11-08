@@ -1,6 +1,6 @@
 import { decode, getPost, getIndex } from "@/lib/content";
 import { mediaUrl } from "@/lib/media";
-import { siteUrl } from "@/lib/site";
+import { SITE_ORIGIN, siteUrl } from "@/lib/site";
 
 export const dynamic = "force-static";
 
@@ -40,7 +40,8 @@ export function GET() {
       const post = getPost(entry.slug);
       const link = siteUrl(`/${entry.slug}/`);
       const summary = post?.meta_description ?? decode(post?.excerpt.rendered.replace(/<[^>]+>/g, " ") ?? "").trim();
-      const image = mediaUrl(post?.featured_image?.url ?? entry.image ?? undefined);
+      const src = mediaUrl(post?.featured_image?.url ?? entry.image ?? undefined);
+      const image = src ? new URL(src, SITE_ORIGIN).href : undefined;
       return [
         "<item>",
         `<title>${xml(entry.title)}</title>`,
