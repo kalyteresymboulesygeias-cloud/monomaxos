@@ -121,7 +121,7 @@ class Gemini:
 
     def _call(self, model: str, system: str, prompt: str, schema):
         last: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(config.GEMINI_ATTEMPTS):
             self.budget.take("gemini")
             try:
                 return self.client.models.generate_content(model=model, contents=prompt, config=self._config(system, schema))
@@ -130,7 +130,7 @@ class Gemini:
                     raise GenerationError(f"Gemini error: {type(exc).__name__} {getattr(exc, 'code', '')}") from None
                 last = exc
                 print(f"[gemini] {model} attempt {attempt + 1}: {_describe(exc)}", file=sys.stderr)
-                time.sleep(2 ** (attempt + 1))
+                time.sleep(5 * 2**attempt)
         raise _Exhausted(_describe(last))
 
     def generate(self, system: str, prompt: str, schema: type[T]) -> T:

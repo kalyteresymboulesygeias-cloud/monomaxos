@@ -33,7 +33,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     if: vars.AUTO_BLOG_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
     env:
       AUTO_BLOG_ENABLED: ${{ vars.AUTO_BLOG_ENABLED }}
@@ -111,6 +111,12 @@ jobs:
             python scripts/generate_articles.py --type "$t" --count "${{ steps.plan.outputs.count }}"
           done
           echo "pr_branch=$pr_branch" >> "$GITHUB_OUTPUT"
+      - name: Upload dry-run articles
+        if: always() && hashFiles('dry-run/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-articles
+          path: dry-run/
       - name: Lint, typecheck, build
         if: steps.plan.outputs.dry != 'true'
         run: |
