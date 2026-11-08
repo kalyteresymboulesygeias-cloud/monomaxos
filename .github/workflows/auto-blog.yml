@@ -98,8 +98,12 @@ jobs:
               continue
             fi
             if { [ "$t" = health ] || [ "$t" = nutrition ]; } && [ "$PUBLISH_MODE_HEALTH" = pr ]; then
-              pr_branch="auto-blog/health-$today-${{ github.run_id }}"
-              git checkout -B "$pr_branch" origin/main
+              if [ -z "$pr_branch" ]; then
+                pr_branch="auto-blog/health-$today-${{ github.run_id }}"
+                git checkout -b "$pr_branch" origin/main
+              else
+                git checkout "$pr_branch"
+              fi
               python scripts/generate_articles.py --type "$t" --count "${{ steps.plan.outputs.count }}"
               git checkout main
               continue
