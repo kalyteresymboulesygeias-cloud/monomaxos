@@ -18,14 +18,16 @@ function getMap() {
 const BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE || "").replace(/\/$/, "");
 const UPLOADS = "/wp-content/uploads";
 /** Some mobile networks refuse *.r2.dev, so R2 files are served same-origin via the /media rewrite. */
-export const R2_ORIGIN = BASE || "https://pub-6eb02a9bf9ab4841b691105e6721ab5e.r2.dev";
+const BUCKET_R2_DEV = "https://pub-6eb02a9bf9ab4841b691105e6721ab5e.r2.dev";
+export const R2_ORIGIN = BASE || BUCKET_R2_DEV;
 export const MEDIA_PROXY = "/media";
 const R2_URL = /https:\/\/pub-[a-z0-9]+\.r2\.dev\/wp-content\/uploads\/[^\s"'<>),]+/g;
 
 function proxied(u: string) {
   try {
     const url = new URL(u);
-    if (url.origin === new URL(R2_ORIGIN).origin && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
+    const bucket = url.origin === BUCKET_R2_DEV || url.origin === new URL(R2_ORIGIN).origin;
+    if (bucket && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
   } catch {
     /* not an absolute URL */
   }
