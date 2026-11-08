@@ -25,8 +25,7 @@ const R2_URL = /https:\/\/pub-[a-z0-9]+\.r2\.dev\/wp-content\/uploads\/[^\s"'<>)
 function proxied(u: string) {
   try {
     const url = new URL(u);
-    const r2 = url.hostname.endsWith(".r2.dev") || (BASE !== "" && url.origin === new URL(BASE).origin);
-    if (r2 && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
+    if (url.origin === new URL(R2_ORIGIN).origin && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
   } catch {
     /* not an absolute URL */
   }
