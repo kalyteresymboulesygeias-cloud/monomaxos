@@ -102,9 +102,11 @@ class Gemini:
                 raise SystemExit("GEMINI_API_KEY is not set")
             client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=config.GEMINI_TIMEOUT_MS))
             available = {m.name.removeprefix("models/") for m in client.models.list()}
-            for name in filter(None, (self.model, self.fallback)):
-                if name not in available:
-                    raise SystemExit(f"Gemini model {name} is not available for this API key. {_stable_models_hint(client)}")
+            if self.model not in available:
+                raise SystemExit(f"Gemini model {self.model} is not available for this API key. {_stable_models_hint(client)}")
+            if self.fallback and self.fallback not in available:
+                print(f"[gemini] fallback {self.fallback} is not available for this API key; running without it", file=sys.stderr)
+                self.fallback = ""
         self.client = client
 
     def _config(self, system: str, schema) -> types.GenerateContentConfig:
@@ -130,7 +132,8 @@ class Gemini:
                     raise GenerationError(f"Gemini error: {type(exc).__name__} {getattr(exc, 'code', '')}") from None
                 last = exc
                 print(f"[gemini] {model} attempt {attempt + 1}: {_describe(exc)}", file=sys.stderr)
-                time.sleep(5 * 2**attempt)
+                if attempt + 1 < config.GEMINI_ATTEMPTS:
+                    time.sleep(5 * 2**attempt)
         raise _Exhausted(_describe(last))
 
     def generate(self, system: str, prompt: str, schema: type[T]) -> T:
