@@ -8,6 +8,9 @@ const STATIC_MEDIA_HOSTS = [
 
 const UPLOAD_PREFIX = "/wp-content/uploads/";
 
+/** Hotlinked stock photos (Unsplash requires hotlinking the returned URL). */
+const STOCK_HOSTS = ["images.unsplash.com"];
+
 export const IMAGE_SIZES = {
   /** Homepage LCP: lg column is about 7/12 of the 72rem shell. */
   hero: "(min-width: 1024px) 40rem, 100vw",
@@ -37,11 +40,14 @@ export function mediaHostnames(): string[] {
 }
 
 export function imageRemotePatterns() {
-  return mediaHostnames().map((hostname) => ({
-    protocol: "https" as const,
-    hostname,
-    pathname: "/wp-content/uploads/**",
-  }));
+  return [
+    ...mediaHostnames().map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+      pathname: "/wp-content/uploads/**",
+    })),
+    ...STOCK_HOSTS.map((hostname) => ({ protocol: "https" as const, hostname, pathname: "/**" })),
+  ];
 }
 
 function isUploadPath(pathname: string) {
@@ -56,6 +62,7 @@ export function isOptimizableImageSrc(src: string): boolean {
   try {
     const url = new URL(src);
     if (url.protocol !== "https:") return false;
+    if (STOCK_HOSTS.includes(url.hostname)) return true;
     if (!isUploadPath(url.pathname)) return false;
     return mediaHostnames().includes(url.hostname);
   } catch {

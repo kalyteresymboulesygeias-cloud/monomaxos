@@ -6,11 +6,11 @@ const DIR = path.join(process.cwd(), "content");
 const read = <T,>(f: string): T => JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
 
 export type Category = { id: number; name: string; slug: string; count: number; parent: number; description?: string };
-export type IndexItem = { id: number; slug: string; date: string; title: string; categories: number[]; image: string | null; file: string };
+export type IndexItem = { id: number; slug: string; date: string; title: string; categories: number[]; image: string | null; file: string; modified?: string };
 export type Post = {
   id: number; slug: string; title: { rendered: string }; content: { rendered: string }; excerpt: { rendered: string };
   date: string; modified: string; link: string; categories: number[]; tags: number[]; featured_media: number;
-  featured_image: { url: string; alt: string; width?: number; height?: number } | null; meta_description: string | null;
+  featured_image: { url: string; alt: string; width?: number; height?: number; credit?: { name: string; url: string } } | null; meta_description: string | null;
 };
 export type Page = { id: number; slug: string; title: { rendered: string }; content: { rendered: string }; date: string; modified: string; link: string; meta_description: string | null };
 

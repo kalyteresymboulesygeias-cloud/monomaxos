@@ -1,0 +1,33 @@
+{
+ "_meta": {
+  "note": "lifestyle: για lifestyle/gossip. news: πηγές ειδήσεων υγείας (κενό μέχρι να οριστούν, οπότε το news παραλείπεται)."
+ },
+ "lifestyle": [
+  {
+   "name": "newsbeast",
+   "list_url": "https://www.newsbeast.gr/lifestyle",
+   "rss": "https://www.newsbeast.gr/lifestyle/feed"
+  },
+  {
+   "name": "newsit",
+   "list_url": "https://www.newsit.gr/category/lifestyle/",
+   "rss": "https://www.newsit.gr/category/lifestyle/feed/"
+  },
+  {
+   "name": "elle",
+   "list_url": "https://www.elle.gr/lifestyle",
+   "rss": "https://www.elle.gr/feed"
+  },
+  {
+   "name": "reader",
+   "list_url": "https://www.reader.gr/lifestyle",
+   "rss": "https://www.reader.gr/rss/lifestyle"
+  },
+  {
+   "name": "okmag",
+   "list_url": "https://www.okmag.gr/",
+   "rss": "https://www.okmag.gr/feed/"
+  }
+ ],
+ "news": []
+}

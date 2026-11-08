@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getCategories, getIndex, getPages, getPostsByCategory } from "@/lib/content";
+import { eortologioRedirectMap } from "@/lib/eortologio";
 import { siteUrl } from "@/lib/site";
 
 function day(stamp: string | undefined) {
@@ -11,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pages = getPages();
   const categories = getCategories();
   const newest = day(index[0]?.date);
+  const redirected = eortologioRedirectMap(index.map((post) => post.slug));
   const seen = new Set<string>();
   const urls: MetadataRoute.Sitemap = [];
 
@@ -43,9 +45,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   for (const post of index) {
+    if (redirected.has(post.slug)) continue;
     add({
       url: siteUrl(`/${post.slug}`),
-      lastModified: day(post.date),
+      lastModified: day(post.modified ?? post.date),
       changeFrequency: "monthly",
       priority: 0.8,
     });

@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: { default: "Μονομάχος", template: "%s | Μονομάχος" },
   description: "Ενημέρωση για υγεία, διατροφή και ευεξία.",
+  alternates: { types: { "application/rss+xml": [{ url: "/feed/", title: "Μονομάχος" }] } },
 };
 
 const ADSENSE = adsenseClient();

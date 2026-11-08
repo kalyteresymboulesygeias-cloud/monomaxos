@@ -1,0 +1,565 @@
+{
+ "_meta": {
+  "note": "Θέματα για health/nutrition. subcategory από κλειστή λίστα: ygeia-diatrofi, eyexia-psychiki-isorropia, omorfia-ygeia, psixiki-ygeia."
+ },
+ "topics": [
+  {
+   "type": "health",
+   "topic": "Ξηρό δέρμα και καλοριφέρ: απλές συνήθειες για τον χειμώνα",
+   "subcategory": "omorfia-ygeia",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Σκασμένα χείλη και χέρια στο κρύο",
+   "subcategory": "omorfia-ygeia",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Πώς να αερίζετε το σπίτι τον χειμώνα χωρίς να κρυώνετε",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Χειμερινή διάθεση και λίγο φως: τι βοηθά στην καθημερινότητα",
+   "subcategory": "psixiki-ygeia",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Πρωινό ξύπνημα στο σκοτάδι: μικρές ρυθμίσεις για πιο ήπιο ξεκίνημα",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    11,
+    12,
+    1
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Περπάτημα με κρύο: ρούχα, ζέσταμα και προσοχή",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Ξηροφθαλμία μπροστά στην οθόνη",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Πόνος στον αυχένα από το κινητό: τι αλλάζει η στάση",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Ρουτίνα πριν τον ύπνο χωρίς οθόνες",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Άγχος της Κυριακής το βράδυ: πώς να το μαλακώσετε",
+   "subcategory": "psixiki-ygeia",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Μικρά διαλείμματα στη δουλειά γραφείου",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Αντηλιακό και τον χειμώνα: πότε έχει νόημα",
+   "subcategory": "omorfia-ygeia",
+   "months": [
+    11,
+    12,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Ανοιξιάτικες αλλεργίες: τι να προσέχετε στο σπίτι",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Αλλαγή ώρας και ύπνος: πώς να προσαρμοστείτε",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    3,
+    10
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Καύσωνας και ηλικιωμένοι: πρακτικές προφυλάξεις",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Ενυδάτωση το καλοκαίρι χωρίς υπερβολές",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Επιστροφή στη ρουτίνα τον Σεπτέμβριο",
+   "subcategory": "psixiki-ygeia",
+   "months": [
+    9
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Μοναξιά στις γιορτές: τρόποι να μείνετε σε επαφή",
+   "subcategory": "psixiki-ygeia",
+   "months": [
+    12,
+    1
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Ήπιες διατάσεις για όσους κάθονται πολλές ώρες",
+   "subcategory": "eyexia-psychiki-isorropia",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Τριχόπτωση εποχής: τι είναι φυσιολογικό και τι όχι",
+   "subcategory": "omorfia-ygeia",
+   "months": [
+    9,
+    10,
+    11
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Πώς να κάνετε ένα σύντομο «ψηφιακό διάλειμμα» μέσα στη μέρα",
+   "subcategory": "psixiki-ygeia",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "health",
+   "topic": "Μύτη που τρέχει και ξηρός αέρας στο σπίτι",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Σούπες λαχανικών για τις κρύες μέρες",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Εσπεριδοειδή του χειμώνα στο καθημερινό τραπέζι",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Όσπρια μία ή δύο φορές την εβδομάδα: πρακτικές ιδέες",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Πώς να διαβάζετε τις φυτικές ίνες στην ετικέτα",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Γιορτινό τραπέζι με μέτρο χωρίς στέρηση",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    12,
+    1
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Νηστεία των Χριστουγέννων και ισορροπημένο πιάτο",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Σαρακοστή και πρωτεΐνη από φυτικές πηγές",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Πρωινό που κρατά ως το μεσημέρι",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Ξηροί καρποί: πόσο είναι μια λογική χούφτα",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Ζεστά ροφήματα χωρίς πολλή ζάχαρη",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    11,
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Λαχανικά εποχής του φθινοπώρου",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    9,
+    10,
+    11
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Καλοκαιρινά φρούτα και σωστή αποθήκευση",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Ψάρι στο εβδομαδιαίο πρόγραμμα: απλές συνταγές",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Σνακ για το γραφείο που δεν είναι γλυκά",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Ελαιόλαδο στην καθημερινή μαγειρική",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Αλάτι στο φαγητό: μικρές αλλαγές στη γεύση",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Γιαούρτι και κεφίρ: τι να κοιτάτε στη συσκευασία",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "type": "nutrition",
+   "topic": "Μαγείρεμα για την εβδομάδα σε μία Κυριακή",
+   "subcategory": "ygeia-diatrofi",
+   "months": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  }
+ ]
+}

@@ -11,6 +11,7 @@ import { decode, fmtDate, prepareContent, getCategories, getIndex, getPage, getP
 import { IMAGE_SIZES } from "@/lib/images";
 import { mediaUrl, rewriteMedia } from "@/lib/media";
 import { optimizeArticleHtml } from "@/lib/optimize-html-images";
+import { SITE_ORIGIN, siteUrl } from "@/lib/site";
 
 export function generateStaticParams() {
   return [...getPages().map((page) => ({ slug: page.slug })), ...getIndex().slice(0, 200).map((post) => ({ slug: post.slug }))];
@@ -57,9 +58,40 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
   const articleSlot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ARTICLE;
   const showSideAd = adSlotVisible(sideSlot);
   const showArticleAd = adSlotVisible(articleSlot);
+  const credit = post.featured_image?.credit;
+  const url = siteUrl(`/${post.slug}/`);
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: title,
+      description: post.meta_description ?? undefined,
+      datePublished: post.date,
+      dateModified: post.modified || post.date,
+      mainEntityOfPage: url,
+      image: image ? [image] : undefined,
+      inLanguage: "el",
+      publisher: { "@type": "Organization", name: "monomaxos.gr", url: SITE_ORIGIN },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Αρχική", item: siteUrl("/") },
+        ...(primary
+          ? [{ "@type": "ListItem", position: 2, name: displayName(primary.name), item: siteUrl(`/category/${primary.slug}/`) }]
+          : []),
+        { "@type": "ListItem", position: primary ? 3 : 2, name: title, item: url },
+      ],
+    },
+  ];
 
   return (
     <div className="space-y-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <div className={showSideAd ? "lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-12" : undefined}>
         <article className={`mx-auto w-full max-w-[72ch]${showSideAd ? " lg:mx-0" : ""}`}>
           <header>
@@ -86,7 +118,29 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
                 sizes={IMAGE_SIZES.article}
                 className="aspect-[16/9] rounded-2xl"
               />
-              {label.caption ? <figcaption className="mt-2 text-sm text-muted">{label.caption}</figcaption> : null}
+              {label.caption || credit ? (
+                <figcaption className="mt-2 text-sm text-muted">
+                  {label.caption}
+                  {label.caption && credit ? " · " : null}
+                  {credit ? (
+                    <>
+                      Φωτογραφία:{" "}
+                      <a href={credit.url} rel="nofollow noopener" target="_blank" className="underline hover:text-pine">
+                        {credit.name}
+                      </a>{" "}
+                      /{" "}
+                      <a
+                        href="https://unsplash.com/?utm_source=monomaxos&utm_medium=referral"
+                        rel="nofollow noopener"
+                        target="_blank"
+                        className="underline hover:text-pine"
+                      >
+                        Unsplash
+                      </a>
+                    </>
+                  ) : null}
+                </figcaption>
+              ) : null}
             </figure>
           ) : null}
           {showArticleAd ? <AdSlot format="article" slot={articleSlot} /> : null}

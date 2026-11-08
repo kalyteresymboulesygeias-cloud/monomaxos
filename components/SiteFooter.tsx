@@ -37,6 +37,16 @@ export default function SiteFooter({ categories }: { categories: NavCategory[] }
                 Όροι χρήσης
               </Link>
             </li>
+            <li>
+              <Link href="/syntaktiki-politiki/" className="hover:text-pine">
+                Συντακτική πολιτική
+              </Link>
+            </li>
+            <li>
+              <Link href="/epikoinonia/" className="hover:text-pine">
+                Επικοινωνία και διορθώσεις
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
