@@ -83,9 +83,12 @@ def _when(value) -> datetime | None:
 
 def same_site(url: str, base: str) -> bool:
     """Only follow http(s) links on the source's own domain (no internal hosts, no redirects elsewhere)."""
-    parts, root = urlparse(url), urlparse(base).netloc.lower().removeprefix("www.")
-    host = (parts.hostname or "").lower()
-    return parts.scheme in ("http", "https") and parts.port is None and (host == root or host.endswith("." + root))
+    try:
+        parts, root = urlparse(url), urlparse(base).netloc.lower().removeprefix("www.")
+        host = (parts.hostname or "").lower()
+        return parts.scheme in ("http", "https") and parts.port is None and (host == root or host.endswith("." + root))
+    except ValueError:
+        return False
 
 
 def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list[dict], list[str]]:

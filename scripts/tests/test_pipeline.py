@@ -117,6 +117,8 @@ class SourceUrls(unittest.TestCase):
         self.assertFalse(same_site("https://okmag.gr.evil.com/a", base))
         self.assertFalse(same_site("file:///etc/passwd", base))
         self.assertFalse(same_site("https://www.okmag.gr:8080/a", base))
+        self.assertFalse(same_site("https://www.okmag.gr:99999/a", base))
+        self.assertFalse(same_site("http://[::1/a", base))
 
 
 class EndToEnd(unittest.TestCase):
