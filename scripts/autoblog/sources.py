@@ -91,9 +91,9 @@ def same_site(url: str, base: str) -> bool:
         return False
 
 
-def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list[dict], list[str]]:
-    """Return (items from the last 48h, source errors)."""
-    cutoff = now - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
+def discover(fetcher: Fetcher, sources: list[dict], now: datetime, max_age_hours: int = config.SOURCE_MAX_AGE_HOURS) -> tuple[list[dict], list[str]]:
+    """Return (items newer than max_age_hours, source errors)."""
+    cutoff = now - timedelta(hours=max_age_hours)
     items, problems = [], []
     for source in sources:
         try:
@@ -101,7 +101,7 @@ def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list
             if source.get("rss"):
                 try:
                     feed = feedparser.parse(fetcher.get(source["rss"]))
-                    for entry in feed.entries[:40]:
+                    for entry in feed.entries[:100]:
                         found.append({
                             "site": source["name"],
                             "title": entry.get("title", "").strip(),

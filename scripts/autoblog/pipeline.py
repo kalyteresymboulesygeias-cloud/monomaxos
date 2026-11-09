@@ -100,7 +100,8 @@ class Runner:
             if not group:
                 raise Skip(f"δεν έχουν οριστεί πηγές για {kind} στο scripts/sources.json")
             fetcher = self.fetcher or sources.Fetcher()
-            items, problems = sources.discover(fetcher, group, util.now_athens())
+            max_age = config.SOURCE_MAX_AGE_HOURS_BY_TYPE.get(kind, config.SOURCE_MAX_AGE_HOURS)
+            items, problems = sources.discover(fetcher, group, util.now_athens(), max_age)
             if not items:
                 raise sources.SourceError("καμία πηγή δεν απάντησε: " + "; ".join(problems[:3]))
             covered = [i["title"] for i in self.ctx.recent({config.CATEGORY_BY_TYPE[kind]}, config.NEWS_TOPIC_WINDOW_DAYS, self.day)]
@@ -109,8 +110,8 @@ class Runner:
             if len(groups) <= slot:
                 raise Skip("κανένα θέμα δεν καλύπτεται από ≥2 διαφορετικά sites")
             chosen = groups[slot]
-            texts, used = [], []
-            cutoff = util.now_athens() - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
+            texts, used, dates = [], [], []
+            cutoff = util.now_athens() - timedelta(hours=max_age)
             for item in {i["site"]: i for i in chosen}.values():
                 try:
                     text, published = sources.article_text(fetcher, item["url"])
@@ -121,12 +122,17 @@ class Runner:
                     continue
                 texts.append(text)
                 used.append(item["url"])
+                dates.append(when.date().isoformat())
             if len(texts) < 2:
                 raise sources.SourceError("δεν κατέβηκαν κείμενα από ≥2 sites")
             plan["topic"] = chosen[0]["title"]
             plan["source_texts"] = texts
             plan["sources"] = used
-            plan["context"] = "Κείμενα πηγών (μόνο για ενημέρωση, ΜΗΝ τα αντιγράψεις):\n" + "\n\n".join(f"[{u}]\n{t[:5000]}" for u, t in zip(used, texts))
+            plan["context"] = (
+                f"Σημερινή ημερομηνία: {today}. Αν η είδηση είναι παλαιότερη, μην τη γράψεις σαν σημερινή.\n"
+                "Κείμενα πηγών (μόνο για ενημέρωση, ΜΗΝ τα αντιγράψεις):\n"
+                + "\n\n".join(f"[{u}] (δημοσίευση: {d})\n{t[:5000]}" for u, d, t in zip(used, dates, texts))
+            )
         return plan
 
     # ---------- generation ----------
