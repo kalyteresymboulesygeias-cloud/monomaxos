@@ -139,6 +139,7 @@ class Runner:
             plan["topic"] = chosen[0]["title"]
             plan["source_texts"] = texts
             plan["sources"] = used
+            plan["source_basis"] = f"Σημερινή ημερομηνία: {today}.\n" + "\n\n".join(f"[{u}] (δημοσίευση: {d})\n{t[:5000]}" for u, d, t in zip(used, dates, texts))
             plan["context"] = (
                 f"Σημερινή ημερομηνία: {today}. Αν η είδηση είναι παλαιότερη, μην τη γράψεις σαν σημερινή.\n"
                 "Κείμενα πηγών (μόνο για ενημέρωση, ΜΗΝ τα αντιγράψεις):\n"
@@ -182,7 +183,7 @@ class Runner:
     def review(self, kind: str, plan: dict, article: Article, html: str) -> list[str]:
         if kind not in VALIDATED:
             return []
-        basis = "Κείμενα πηγών:\n" + "\n\n".join(t[:5000] for t in plan["source_texts"]) if kind in NEWS else "Βάση: γενικά αποδεκτή ιατρική γνώση."
+        basis = "Κείμενα πηγών:\n" + plan.get("source_basis", "\n\n".join(t[:5000] for t in plan["source_texts"])) if kind in NEWS else "Βάση: γενικά αποδεκτή ιατρική γνώση."
         verdict = self.gemini.generate(VALIDATOR, f"Τύπος: {kind}\nΤίτλος: {article.title}\n\nΚείμενο:\n{util.html_text(html)}\n\n{basis}", Verdict)
         return [] if verdict.verdict == "PASS" else ["AI ελεγκτής: " + "; ".join(verdict.reasons or ["FAIL"])]
 
