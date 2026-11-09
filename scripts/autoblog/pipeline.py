@@ -117,22 +117,23 @@ class Runner:
             texts, used, dates = [], [], []
             cutoff = util.now_athens() - timedelta(hours=max_age)
             lead = chosen[0]["title"]
-            best: dict[str, dict] = {}
-            for i in chosen:
-                if i["site"] not in best or util.similarity(i["title"], lead) > util.similarity(best[i["site"]]["title"], lead):
-                    best[i["site"]] = i
-            for item in best.values():
-                try:
-                    text, published = sources.article_text(fetcher, item["url"])
-                except sources.SourceError:
-                    continue
-                known = [d for d in (item["date"], published) if d]
-                when = min(known) if known else None
-                if when is None or when < cutoff:
-                    continue
-                texts.append(text)
-                used.append(item["url"])
-                dates.append(when.astimezone(util.ATHENS).date().isoformat())
+            by_site: dict[str, list[dict]] = {}
+            for i in sorted(chosen, key=lambda i: -util.similarity(i["title"], lead)):
+                by_site.setdefault(i["site"], []).append(i)
+            for candidates in by_site.values():
+                for item in candidates:
+                    try:
+                        text, published = sources.article_text(fetcher, item["url"])
+                    except sources.SourceError:
+                        continue
+                    known = [d for d in (item["date"], published) if d]
+                    when = min(known) if known else None
+                    if when is None or when < cutoff:
+                        continue
+                    texts.append(text)
+                    used.append(item["url"])
+                    dates.append(when.astimezone(util.ATHENS).date().isoformat())
+                    break
             if len(texts) < 2:
                 raise sources.SourceError("δεν κατέβηκαν κείμενα από ≥2 sites")
             plan["topic"] = chosen[0]["title"]
