@@ -25,6 +25,10 @@ on:
         description: "Dry-run only: article date YYYY-MM-DD (default: today, Athens)"
         required: false
         default: ""
+      rewrite:
+        description: "Dry-run only: slugs of existing posts to write again from scratch (space separated)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -84,7 +88,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "types=${{ inputs.type }}" >> "$GITHUB_OUTPUT"
             echo "count=${{ inputs.count }}" >> "$GITHUB_OUTPUT"
-            echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+            if [ -n "${{ inputs.rewrite }}" ]; then echo "dry=true" >> "$GITHUB_OUTPUT"; else echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"; fi
           else
             case "${{ github.event.schedule }}" in
               "0 4 * * *") types="eortologio zodia" ;;
@@ -99,8 +103,13 @@ jobs:
         id: gen
         env:
           DRY_DATE: ${{ inputs.date }}
+          REWRITE: ${{ inputs.rewrite }}
         run: |
           set -euo pipefail
+          if [ -n "${REWRITE:-}" ]; then
+            for s in $REWRITE; do python scripts/generate_articles.py --rewrite "$s" --dry-run || true; done
+            exit 0
+          fi
           today=$(TZ=Europe/Athens date +%F)
           pr_branch=""
           for t in ${{ steps.plan.outputs.types }}; do

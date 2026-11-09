@@ -24,8 +24,9 @@ class Skip(Exception):
 
 
 class Runner:
-    def __init__(self, day: date, *, dry_run: bool, commit: bool, gemini=None, fetcher=None, http=None, log=print):
+    def __init__(self, day: date, *, dry_run: bool, commit: bool, gemini=None, fetcher=None, http=None, log=print, rewrite: dict | None = None):
         self.day = day
+        self.rewrite = rewrite
         self.dry = dry_run
         self.commit = commit and not dry_run
         self.ctx = ContentIndex(config.CONTENT_DIR)
@@ -54,7 +55,29 @@ class Runner:
         rows = [json.loads(l) for l in (config.STATE_DIR / "runs.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()] if (config.STATE_DIR / "runs.jsonl").exists() else []
         return sum(1 for r in rows if r.get("type") == kind and r.get("date") == self.day.isoformat() and r.get("status") == "PASS")
 
+    def plan_rewrite(self, kind: str) -> dict:
+        """Fresh text for an existing post: same slug, date and category."""
+        post = self.rewrite
+        today = util.greek_date(self.day)
+        plan: dict = {"type": kind, "category": post["categories"][0], "slug": post["slug"], "update": True, "date": post["date"],
+                      "topic": post["title"], "context": "", "source_texts": [], "sources": []}
+        if kind == "eortologio":
+            data = namedays.for_day(self.day)
+            if not data["names"]:
+                raise Skip("δεν υπάρχουν ονόματα για την ημέρα στα δεδομένα")
+            plan["names"] = set(data["names"])
+            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False)
+        elif kind == "zodia":
+            plan["previous"] = [self.ctx.body_text(i["slug"]) for i in self.ctx.recent({407}, 7, self.day) if i["slug"] != post["slug"]]
+            plan["context"] = f"Ημέρα: {today}."
+        else:
+            plan["context"] = (f"Θέμα: {post['title']}.\nΓράψε από την αρχή νέο, πρωτότυπο άρθρο για αυτό το θέμα, με δική σου δομή.\n"
+                               f"Σημερινή ημερομηνία: {util.greek_date(util.now_athens().date())}.")
+        return plan
+
     def plan(self, kind: str, slot: int) -> dict:
+        if self.rewrite:
+            return self.plan_rewrite(kind)
         plan: dict = {"type": kind, "category": config.CATEGORY_BY_TYPE[kind], "slug": None, "update": False, "context": "", "source_texts": [], "sources": []}
         when = datetime.fromisoformat(f"{self.day.isoformat()}T{config.PUBLISH_TIME[kind]}:00") + timedelta(hours=2 * slot)
         plan["date"] = util.stamp(when)
@@ -218,7 +241,7 @@ class Runner:
             reasons = self.review(kind, plan, article, html)
             if reasons:
                 raise GenerationError("; ".join(reasons))
-            category = config.HEALTH_SUBCATEGORIES.get(article.subcategory or "", plan["category"]) if kind == "health" else plan["category"]
+            category = config.HEALTH_SUBCATEGORIES.get(article.subcategory or "", plan["category"]) if kind == "health" and not self.rewrite else plan["category"]
             alt = (article.image_alts or [article.title])[0]
             image, photo_id, info = unsplash.pick_image(article.image_queries, alt, category, self.budget, dry_run=self.dry, session=self.http)
             record["image"] = info
