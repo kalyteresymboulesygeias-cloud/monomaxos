@@ -70,6 +70,42 @@ export function isOptimizableImageSrc(src: string): boolean {
   }
 }
 
+/** Pixel width to request from Unsplash for each cover slot. */
+export const STOCK_MAX_WIDTH = {
+  hero: 960,
+  article: 1200,
+  featured: 960,
+  horizontal: 640,
+  compact: 640,
+  thumb: 256,
+} as const;
+
+/**
+ * Unsplash hotlinks are full-size unless `w` is set. The Vercel optimizer is
+ * off (402), so ask the CDN for a display-sized WebP/AVIF instead.
+ * Other hosts are left untouched.
+ */
+export function displayImageSrc(src: string, maxWidth: number): string {
+  const upgraded = upgradeMediaSrc(src);
+  const width = Math.round(maxWidth);
+  if (!Number.isFinite(width) || width < 64 || width > 2000) return upgraded;
+  let url: URL;
+  try {
+    url = new URL(upgraded);
+  } catch {
+    return upgraded;
+  }
+  if (!STOCK_HOSTS.includes(url.hostname)) return upgraded;
+  const current = Number(url.searchParams.get("w"));
+  url.searchParams.set("w", String(Number.isFinite(current) && current > 0 ? Math.min(current, width) : width));
+  const quality = Number(url.searchParams.get("q"));
+  url.searchParams.set("q", String(Number.isFinite(quality) && quality > 0 ? Math.min(quality, 70) : 70));
+  url.searchParams.delete("fm");
+  url.searchParams.set("auto", "format");
+  if (!url.searchParams.get("fit")) url.searchParams.set("fit", "max");
+  return url.href;
+}
+
 /** WordPress leftovers sometimes use http://. The optimizer allowlist is https only. */
 export function upgradeMediaSrc(src: string): string {
   try {

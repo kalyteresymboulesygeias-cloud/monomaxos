@@ -1,5 +1,5 @@
 import { getImageProps } from "next/image";
-import { IMAGE_SIZES, isOptimizableImageSrc, upgradeMediaSrc } from "@/lib/images";
+import { IMAGE_SIZES, displayImageSrc, isOptimizableImageSrc, upgradeMediaSrc } from "@/lib/images";
 
 const IMG_TAG = /<img\b[^>]*>/gi;
 
@@ -57,11 +57,17 @@ function fileTag(tag: string, rawSrc: string, src: string) {
   return src === rawSrc ? tag : replaceSrc(tag, src);
 }
 
+function stockWidth(width: number | null) {
+  if (!width) return 960;
+  if (width <= 800) return Math.min(960, width * 2);
+  return Math.min(width, 1200);
+}
+
 function optimizeTag(tag: string) {
   const rawSrc = attr(tag, "src");
   if (!rawSrc) return tag;
-  const src = upgradeMediaSrc(rawSrc);
   const dims = dimensions(tag);
+  const src = displayImageSrc(upgradeMediaSrc(rawSrc), stockWidth(dims?.width ?? null));
   if (!dims || !isOptimizableImageSrc(src)) return fileTag(tag, rawSrc, src);
   try {
     const { props } = getImageProps({
