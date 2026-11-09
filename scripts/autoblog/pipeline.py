@@ -117,12 +117,13 @@ class Runner:
                     text, published = sources.article_text(fetcher, item["url"])
                 except sources.SourceError:
                     continue
-                when = item["date"] or published
+                known = [d for d in (item["date"], published) if d]
+                when = min(known) if known else None
                 if when is None or when < cutoff:
                     continue
                 texts.append(text)
                 used.append(item["url"])
-                dates.append(when.date().isoformat())
+                dates.append(when.astimezone(util.ATHENS).date().isoformat())
             if len(texts) < 2:
                 raise sources.SourceError("δεν κατέβηκαν κείμενα από ≥2 sites")
             plan["topic"] = chosen[0]["title"]
