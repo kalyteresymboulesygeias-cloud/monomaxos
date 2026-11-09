@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { isOptimizableImageSrc, upgradeMediaSrc } from "@/lib/images";
+import { displayImageSrc, isOptimizableImageSrc } from "@/lib/images";
 
 export default function CoverImage({
   src,
@@ -10,6 +10,7 @@ export default function CoverImage({
   priority = false,
   className = "",
   sizes,
+  maxWidth = 960,
 }: {
   src?: string;
   alt: string;
@@ -17,8 +18,10 @@ export default function CoverImage({
   priority?: boolean;
   className?: string;
   sizes: string;
+  /** Display width to request from Unsplash. Ignored for files we cannot resize. */
+  maxWidth?: number;
 }) {
-  const resolved = src ? upgradeMediaSrc(src) : undefined;
+  const resolved = src ? displayImageSrc(src, maxWidth) : undefined;
   // Keyed by src so a reused card does not keep a previous photo's failure.
   const [optimizerFailedSrc, setOptimizerFailedSrc] = useState<string | undefined>();
   const [missingSrc, setMissingSrc] = useState<string | undefined>();

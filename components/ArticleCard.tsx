@@ -3,7 +3,7 @@ import type { IndexItem } from "@/lib/content";
 import { fmtDate } from "@/lib/content";
 import CoverImage from "@/components/CoverImage";
 import { displayName } from "@/components/editorial";
-import { IMAGE_SIZES } from "@/lib/images";
+import { IMAGE_SIZES, STOCK_MAX_WIDTH } from "@/lib/images";
 import { mediaUrl } from "@/lib/media";
 
 export type CardVariant = "hero" | "featured" | "compact" | "horizontal";
@@ -30,6 +30,14 @@ export default function ArticleCard({
         : variant === "horizontal"
           ? IMAGE_SIZES.horizontal
           : IMAGE_SIZES.compact;
+  const maxWidth =
+    variant === "hero"
+      ? STOCK_MAX_WIDTH.hero
+      : variant === "featured"
+        ? STOCK_MAX_WIDTH.featured
+        : variant === "horizontal"
+          ? STOCK_MAX_WIDTH.horizontal
+          : STOCK_MAX_WIDTH.compact;
   const kicker = category ? (
     <span className="text-xs font-medium text-pine">{displayName(category.name)}</span>
   ) : null;
@@ -43,7 +51,7 @@ export default function ArticleCard({
     return (
       <article>
         <Link href={`/${post.slug}`} className="group block">
-          <CoverImage src={src} alt="" priority={priority} sizes={sizes} className="aspect-[4/3] rounded-2xl sm:aspect-[16/10]" />
+          <CoverImage src={src} alt="" priority={priority} sizes={sizes} maxWidth={maxWidth} className="aspect-[4/3] rounded-2xl sm:aspect-[16/10]" />
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {kicker}
             {date}
@@ -65,7 +73,7 @@ export default function ArticleCard({
     return (
       <article>
         <Link href={`/${post.slug}`} className="group grid gap-4 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] sm:items-center sm:gap-6">
-          <CoverImage src={src} alt="" priority={priority} sizes={sizes} className="aspect-[16/10] rounded-xl" />
+          <CoverImage src={src} alt="" priority={priority} sizes={sizes} maxWidth={maxWidth} className="aspect-[16/10] rounded-xl" />
           <div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               {kicker}
@@ -84,7 +92,7 @@ export default function ArticleCard({
   return (
     <article className="h-full">
       <Link href={`/${post.slug}`} className="group flex h-full flex-col">
-        <CoverImage src={src} alt="" sizes={sizes} className="aspect-[3/2] rounded-xl" />
+        <CoverImage src={src} alt="" sizes={sizes} maxWidth={maxWidth} className="aspect-[3/2] rounded-xl" />
         <div className="mt-3 flex flex-1 flex-col">
           {kicker}
           <h2 className="mt-1.5 text-balance font-serif text-xl leading-snug text-ink decoration-coral/80 decoration-1 underline-offset-4 group-hover:underline">

@@ -8,7 +8,7 @@ import SectionRail from "@/components/SectionRail";
 import { displayName, imageLabel } from "@/components/editorial";
 import { adSlotVisible } from "@/lib/ads";
 import { decode, fmtDate, prepareContent, getCategories, getIndex, getPage, getPages, getPost, getPostsByCategory } from "@/lib/content";
-import { IMAGE_SIZES } from "@/lib/images";
+import { IMAGE_SIZES, STOCK_MAX_WIDTH } from "@/lib/images";
 import { mediaUrl, rewriteMedia } from "@/lib/media";
 import { optimizeArticleHtml } from "@/lib/optimize-html-images";
 import { SITE_ORIGIN, siteUrl } from "@/lib/site";
@@ -116,6 +116,7 @@ export default async function Entry({ params }: { params: Promise<{ slug: string
                 alt={label.alt}
                 priority
                 sizes={IMAGE_SIZES.article}
+                maxWidth={STOCK_MAX_WIDTH.article}
                 className="aspect-[16/9] rounded-2xl"
               />
               {credit ? (

@@ -50,23 +50,23 @@ export default function SectionRail({
           <div className="space-y-8">
             <ArticleCard post={posts[0]} category={primaryCategory(posts[0], categories)} variant="horizontal" />
             {posts.length > 1 ? (
-              <ul className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2">
                 {posts.slice(1, 3).map((post) => (
-                  <li key={post.id}>
+                  <div key={post.id}>
                     <ArticleCard post={post} category={primaryCategory(post, categories)} />
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : null}
             {showInfeed ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
             {posts.length > 3 ? (
-              <ul className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2">
                 {posts.slice(3, 6).map((post) => (
-                  <li key={post.id}>
+                  <div key={post.id}>
                     <ArticleCard post={post} category={primaryCategory(post, categories)} />
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : null}
             {showInfeed && posts.length > 5 ? <AdSlot format="infeed" slot={slot} className="my-0" /> : null}
           </div>
@@ -97,17 +97,17 @@ export default function SectionRail({
           ) : null}
         </div>
       ) : (
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {posts.map((post, index) => (
-            <li key={post.id} className={index === 0 ? "sm:col-span-2" : undefined}>
+            <div key={post.id} className={index === 0 ? "sm:col-span-2" : undefined}>
               <ArticleCard
                 post={post}
                 category={primaryCategory(post, categories)}
                 variant={index === 0 ? "featured" : "compact"}
               />
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
