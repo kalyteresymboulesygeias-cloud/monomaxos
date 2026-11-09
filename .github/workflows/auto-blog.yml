@@ -37,7 +37,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     if: vars.AUTO_BLOG_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
     env:
       AUTO_BLOG_ENABLED: ${{ vars.AUTO_BLOG_ENABLED }}
