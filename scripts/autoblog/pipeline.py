@@ -12,6 +12,7 @@ from . import checks, linking, namedays, render, sources, unsplash, util
 from .budget import Budget, BudgetExceeded
 from .content import ContentIndex
 from .gemini import Article, Gemini, GenerationError, Verdict
+from .openai_llm import OpenAIWriter
 from .prompts import STYLE, TYPE_RULES, VALIDATOR
 
 VALIDATED = {"news", "lifestyle", "gossip", "health", "nutrition"}
@@ -38,9 +39,12 @@ class Runner:
         self.records: list[dict] = []
 
     @property
-    def gemini(self) -> Gemini:
+    def gemini(self) -> Gemini | OpenAIWriter:
         if self._gemini is None:
-            self._gemini = Gemini(self.budget)
+            provider = config.env("AI_PROVIDER").lower() or ("openai" if config.env("OPENAI_API_KEY") else "gemini")
+            if provider not in ("openai", "gemini"):
+                raise SystemExit("AI_PROVIDER must be openai or gemini")
+            self._gemini = OpenAIWriter(self.budget) if provider == "openai" else Gemini(self.budget)
         return self._gemini
 
     # ---------- planning ----------
