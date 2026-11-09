@@ -183,6 +183,17 @@ class OpenAIWriterTests(unittest.TestCase):
         part = SimpleNamespace(type=content_type, text=text)
         return SimpleNamespace(status=status, incomplete_details=None, output=[SimpleNamespace(type="message", content=[part])], output_text=text)
 
+    def test_model_list_error_skips_check(self):
+        import openai
+        from types import SimpleNamespace
+
+        def fail():
+            raise openai.APIConnectionError(request=self.httpx.Request("GET", "https://api.openai.com/v1/models"))
+
+        writer, _ = self.writer([])
+        writer._check_models(SimpleNamespace(models=SimpleNamespace(list=fail)))
+        self.assertEqual(writer.fallback, "gpt-backup")
+
     def test_strict_schema_has_no_defaults(self):
         schema = openai_llm.strict_schema(Verdict)
         self.assertNotIn("default", str(schema))

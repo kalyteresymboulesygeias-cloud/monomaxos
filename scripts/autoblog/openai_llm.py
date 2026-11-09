@@ -71,15 +71,22 @@ class OpenAIWriter:
             if not key:
                 raise SystemExit("OPENAI_API_KEY is not set")
             client = openai.OpenAI(api_key=key, timeout=config.LLM_TIMEOUT_S, max_retries=0)
-            available = {m.id for m in client.models.list()}
-            hint = "Models for this key: " + ", ".join(sorted(m for m in available if m.startswith(("gpt-", "o"))))
-            if self.model not in available:
-                raise SystemExit(f"OpenAI model {self.model} is not available for this API key. {hint}")
-            print(f"[openai] using {self.model}. {hint}", file=sys.stderr)
-            if self.fallback and self.fallback not in available:
-                print(f"[openai] fallback {self.fallback} is not available for this API key; running without it", file=sys.stderr)
-                self.fallback = ""
+            self._check_models(client)
         self.client = client
+
+    def _check_models(self, client) -> None:
+        try:
+            available = {m.id for m in client.models.list()}
+        except openai.APIError as exc:
+            print(f"[openai] could not list models, skipping the model check: {_describe(exc)}", file=sys.stderr)
+            return
+        hint = "Models for this key: " + ", ".join(sorted(m for m in available if m.startswith(("gpt-", "o"))))
+        if self.model not in available:
+            raise SystemExit(f"OpenAI model {self.model} is not available for this API key. {hint}")
+        print(f"[openai] using {self.model}. {hint}", file=sys.stderr)
+        if self.fallback and self.fallback not in available:
+            print(f"[openai] fallback {self.fallback} is not available for this API key; running without it", file=sys.stderr)
+            self.fallback = ""
 
     def _call(self, model: str, system: str, prompt: str, schema: type[BaseModel]):
         extra: dict[str, Any] = {"reasoning": {"effort": self.effort}} if self.effort else {}
