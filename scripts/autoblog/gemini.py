@@ -68,11 +68,13 @@ def _stable_models_hint(client=None) -> str:
     return "Stable models for this key: " + ", ".join(names) if names else ""
 
 
+def _daily_quota(exc: Exception) -> bool:
+    return getattr(exc, "code", None) == 429 and "per day" in str(exc).lower()
+
+
 def _retryable(exc: Exception) -> bool:
     if isinstance(exc, errors.APIError):
-        if exc.code == 429:
-            return "per day" not in str(exc).lower()
-        return (exc.code or 0) >= 500
+        return exc.code == 429 or (exc.code or 0) >= 500
     return isinstance(exc, (httpx.TimeoutException, TimeoutError, httpx.TransportError))
 
 
@@ -134,6 +136,8 @@ class Gemini:
                     raise GenerationError(f"Gemini error: {type(exc).__name__} {getattr(exc, 'code', '')}") from None
                 last = exc
                 print(f"[gemini] {model} attempt {attempt + 1}: {_describe(exc)}", file=sys.stderr)
+                if _daily_quota(exc):
+                    break
                 if attempt + 1 < config.GEMINI_ATTEMPTS:
                     time.sleep(5 * 2**attempt)
         raise _Exhausted(_describe(last))
