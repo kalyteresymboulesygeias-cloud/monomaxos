@@ -1,6 +1,7 @@
 """google-genai wrapper: structured output, bounded retries, fallback model, call accounting."""
 from __future__ import annotations
 
+import sys
 import time
 from typing import Literal, TypeVar
 
@@ -67,10 +68,22 @@ def _stable_models_hint(client=None) -> str:
     return "Stable models for this key: " + ", ".join(names) if names else ""
 
 
+def _daily_quota(exc: Exception) -> bool:
+    return getattr(exc, "code", None) == 429 and "per day" in str(exc).lower()
+
+
 def _retryable(exc: Exception) -> bool:
     if isinstance(exc, errors.APIError):
         return exc.code == 429 or (exc.code or 0) >= 500
     return isinstance(exc, (httpx.TimeoutException, TimeoutError, httpx.TransportError))
+
+
+def _describe(exc: Exception | None) -> str:
+    if exc is None:
+        return "unknown"
+    code = getattr(exc, "code", "") or ""
+    detail = " ".join(str(exc).split())[:900]
+    return f"{type(exc).__name__} {code} {detail}".strip()
 
 
 class Gemini:
@@ -93,9 +106,11 @@ class Gemini:
                 raise SystemExit("GEMINI_API_KEY is not set")
             client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=config.GEMINI_TIMEOUT_MS))
             available = {m.name.removeprefix("models/") for m in client.models.list()}
-            for name in filter(None, (self.model, self.fallback)):
-                if name not in available:
-                    raise SystemExit(f"Gemini model {name} is not available for this API key. {_stable_models_hint(client)}")
+            if self.model not in available:
+                raise SystemExit(f"Gemini model {self.model} is not available for this API key. {_stable_models_hint(client)}")
+            if self.fallback and self.fallback not in available:
+                print(f"[gemini] fallback {self.fallback} is not available for this API key; running without it", file=sys.stderr)
+                self.fallback = ""
         self.client = client
 
     def _config(self, system: str, schema) -> types.GenerateContentConfig:
@@ -112,7 +127,7 @@ class Gemini:
 
     def _call(self, model: str, system: str, prompt: str, schema):
         last: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(config.GEMINI_ATTEMPTS):
             self.budget.take("gemini")
             try:
                 return self.client.models.generate_content(model=model, contents=prompt, config=self._config(system, schema))
@@ -120,8 +135,12 @@ class Gemini:
                 if not _retryable(exc):
                     raise GenerationError(f"Gemini error: {type(exc).__name__} {getattr(exc, 'code', '')}") from None
                 last = exc
-                time.sleep(2 ** (attempt + 1))
-        raise _Exhausted(type(last).__name__)
+                print(f"[gemini] {model} attempt {attempt + 1}: {_describe(exc)}", file=sys.stderr)
+                if _daily_quota(exc):
+                    break
+                if attempt + 1 < config.GEMINI_ATTEMPTS:
+                    time.sleep(5 * 2**attempt)
+        raise _Exhausted(_describe(last))
 
     def generate(self, system: str, prompt: str, schema: type[T]) -> T:
         try:

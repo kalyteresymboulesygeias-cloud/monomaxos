@@ -56,7 +56,7 @@ class Runner:
         plan["date"] = util.stamp(when)
         today = util.greek_date(self.day)
         if kind == "eortologio":
-            if config.env("AUTO_BLOG_ENABLED_EORTOLOGIO") != "true":
+            if config.env("AUTO_BLOG_ENABLED_EORTOLOGIO") != "true" and not self.dry:
                 raise Skip("AUTO_BLOG_ENABLED_EORTOLOGIO δεν είναι true (τα δεδομένα εορτολογίου θέλουν έλεγχο)")
             if self.ctx.on_date(406, self.day):
                 raise Skip("υπάρχει ήδη άρθρο εορτολογίου για σήμερα")
@@ -220,6 +220,7 @@ class Runner:
                 shown = {**payload, "content": html[:300] + "…"}
                 self.log(json.dumps(shown, ensure_ascii=False, indent=1))
                 self.log("\n".join(render.paragraphs(html, 2)))
+                util.write_json(config.DRY_RUN_DIR / f"{kind}-{result['slug']}.json", payload)
             else:
                 unsplash.remember(photo_id, None if photo_id else image["url"])
                 topics = util.read_json(config.STATE_DIR / "topics.json", {"topics": []}) or {"topics": []}
