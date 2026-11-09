@@ -27,6 +27,21 @@
    "name": "okmag",
    "list_url": "https://www.okmag.gr/",
    "rss": "https://www.okmag.gr/feed/"
+  },
+  {
+   "name": "tlife",
+   "list_url": "https://www.tlife.gr/",
+   "rss": "https://www.tlife.gr/feed"
+  },
+  {
+   "name": "ladylike",
+   "list_url": "https://www.ladylike.gr/",
+   "rss": "https://www.ladylike.gr/feed/"
+  },
+  {
+   "name": "athensmagazine",
+   "list_url": "https://www.athensmagazine.gr/",
+   "rss": "https://www.athensmagazine.gr/feed"
   }
  ],
  "news": []

@@ -25,6 +25,10 @@ on:
         description: "Dry-run only: article date YYYY-MM-DD (default: today, Athens)"
         required: false
         default: ""
+      rewrite:
+        description: "Dry-run only: slugs of existing posts to write again from scratch (space separated)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -48,6 +52,11 @@ jobs:
       GEMINI_FALLBACK_MODEL: ${{ vars.GEMINI_FALLBACK_MODEL || 'gemini-3.7-flash' }}
       GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-6.1-sol' }}
+      OPENAI_FALLBACK_MODEL: ${{ vars.OPENAI_FALLBACK_MODEL || 'gpt-6.1-terra' }}
+      OPENAI_REASONING_EFFORT: ${{ vars.OPENAI_REASONING_EFFORT }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -75,11 +84,13 @@ jobs:
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
       - name: Pick article types
         id: plan
+        env:
+          REWRITE: ${{ inputs.rewrite }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "types=${{ inputs.type }}" >> "$GITHUB_OUTPUT"
             echo "count=${{ inputs.count }}" >> "$GITHUB_OUTPUT"
-            echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+            if [ -n "${REWRITE:-}" ]; then echo "dry=true" >> "$GITHUB_OUTPUT"; else echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"; fi
           else
             case "${{ github.event.schedule }}" in
               "0 4 * * *") types="eortologio zodia" ;;
@@ -94,8 +105,14 @@ jobs:
         id: gen
         env:
           DRY_DATE: ${{ inputs.date }}
+          REWRITE: ${{ inputs.rewrite }}
         run: |
           set -euo pipefail
+          if [ -n "${REWRITE:-}" ]; then
+            failed=0
+            for s in $REWRITE; do python scripts/generate_articles.py --rewrite "$s" --dry-run || failed=1; done
+            exit "$failed"
+          fi
           today=$(TZ=Europe/Athens date +%F)
           pr_branch=""
           for t in ${{ steps.plan.outputs.types }}; do

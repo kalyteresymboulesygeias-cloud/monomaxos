@@ -24,6 +24,7 @@ from autoblog import checks, render, util  # noqa: E402
 from autoblog.content import ContentIndex  # noqa: E402
 from autoblog.gemini import Article, Verdict  # noqa: E402
 from autoblog.pipeline import Runner  # noqa: E402
+from autoblog import openai_llm  # noqa: E402
 
 BLOCKED = util.read_json(config.DATA_DIR / "blocked_terms.json")
 SIGNS = ["Κριός", "Ταύρος", "Δίδυμοι", "Καρκίνος", "Λέων", "Παρθένος", "Ζυγός", "Σκορπιός", "Τοξότης", "Αιγόκερως", "Υδροχόος", "Ιχθύες"]
@@ -131,13 +132,13 @@ class EndToEnd(unittest.TestCase):
     def test_zodia_publish_then_idempotent(self):
         ctx = ContentIndex(config.CONTENT_DIR)
         link = next(i["slug"] for i in ctx.index if 19 in i["categories"])
-        day = date(2026, 11, 9)
+        day = date(2027, 11, 8)
         fake = FakeGemini(zodia_article(link))
         first = Runner(day, dry_run=False, commit=False, gemini=fake, log=lambda *_: None)
         first.run("zodia", 1)
         self.assertEqual(first.records[0]["status"], "PASS", first.records[0]["reasons"])
         slug = first.records[0]["slug"]
-        self.assertEqual(slug, "zodia-simera-deytera-9-noemvrioy-2026")
+        self.assertEqual(slug, "zodia-simera-deytera-8-noemvrioy-2027")
         post = ContentIndex(config.CONTENT_DIR).posts[slug]
         self.assertIn("ψυχαγωγικό χαρακτήρα", post["content"]["rendered"])
         self.assertNotIn("Αποποίηση ευθύνης", post["content"]["rendered"])
@@ -145,6 +146,85 @@ class EndToEnd(unittest.TestCase):
         second.run("zodia", 1)
         self.assertEqual(second.records[0]["status"], "SKIP")
         self.assertEqual(fake.calls, 1)
+
+
+class OpenAIWriterTests(unittest.TestCase):
+    def setUp(self):
+        import httpx2
+        from unittest import mock
+        self.httpx = httpx2
+        os.environ["OPENAI_MODEL"] = "gpt-main"
+        os.environ["OPENAI_FALLBACK_MODEL"] = "gpt-backup"
+        patcher = mock.patch.object(openai_llm.time, "sleep", lambda *_: None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def error(self, cls, status, body=None):
+        response = self.httpx.Response(status, request=self.httpx.Request("POST", "https://api.openai.com/v1/responses"))
+        return cls("boom", response=response, body=body)
+
+    def writer(self, replies):
+        from types import SimpleNamespace
+        calls = []
+
+        def create(**kw):
+            calls.append(kw["model"])
+            reply = replies.pop(0)
+            if isinstance(reply, Exception):
+                raise reply
+            return reply
+
+        client = SimpleNamespace(responses=SimpleNamespace(create=create))
+        return openai_llm.OpenAIWriter(openai_llm.Budget("2026-11-09", persist=False), client=client), calls
+
+    @staticmethod
+    def ok(text, status="completed", content_type="output_text"):
+        from types import SimpleNamespace
+        part = SimpleNamespace(type=content_type, text=text)
+        return SimpleNamespace(status=status, incomplete_details=None, output=[SimpleNamespace(type="message", content=[part])], output_text=text)
+
+    def test_model_list_error_skips_check(self):
+        import openai
+        from types import SimpleNamespace
+
+        def fail():
+            raise openai.APIConnectionError(request=self.httpx.Request("GET", "https://api.openai.com/v1/models"))
+
+        writer, _ = self.writer([])
+        writer._check_models(SimpleNamespace(models=SimpleNamespace(list=fail)))
+        self.assertEqual(writer.fallback, "gpt-backup")
+
+    def test_strict_schema_has_no_defaults(self):
+        schema = openai_llm.strict_schema(Verdict)
+        self.assertNotIn("default", str(schema))
+        self.assertEqual(sorted(schema["required"]), ["reasons", "verdict"])
+
+    def test_retries_server_error_then_parses(self):
+        import openai
+        writer, calls = self.writer([self.error(openai.InternalServerError, 500), self.ok('{"verdict": "PASS", "reasons": []}')])
+        self.assertEqual(writer.generate("s", "p", Verdict).verdict, "PASS")
+        self.assertEqual(calls, ["gpt-main", "gpt-main"])
+
+    def test_insufficient_quota_goes_to_fallback(self):
+        import openai
+        for code in ("insufficient_quota", "credit_balance_exhausted"):
+            quota = self.error(openai.RateLimitError, 429, {"code": code})
+            writer, calls = self.writer([quota, self.ok('{"verdict": "FAIL", "reasons": ["x"]}')])
+            self.assertEqual(writer.generate("s", "p", Verdict).verdict, "FAIL")
+            self.assertEqual(calls, ["gpt-main", "gpt-backup"])
+
+    def test_bad_request_is_not_retried(self):
+        import openai
+        writer, calls = self.writer([self.error(openai.BadRequestError, 400)])
+        with self.assertRaises(openai_llm.GenerationError):
+            writer.generate("s", "p", Verdict)
+        self.assertEqual(calls, ["gpt-main"])
+
+    def test_refusal_and_incomplete_fail(self):
+        writer, _ = self.writer([self.ok("no", content_type="refusal"), self.ok("{", status="incomplete")])
+        for _ in range(2):
+            with self.assertRaises(openai_llm.GenerationError):
+                writer.generate("s", "p", Verdict)
 
 
 if __name__ == "__main__":

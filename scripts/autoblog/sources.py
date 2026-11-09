@@ -91,9 +91,9 @@ def same_site(url: str, base: str) -> bool:
         return False
 
 
-def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list[dict], list[str]]:
-    """Return (items from the last 48h, source errors)."""
-    cutoff = now - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
+def discover(fetcher: Fetcher, sources: list[dict], now: datetime, max_age_hours: int = config.SOURCE_MAX_AGE_HOURS) -> tuple[list[dict], list[str]]:
+    """Return (items newer than max_age_hours, source errors)."""
+    cutoff = now - timedelta(hours=max_age_hours)
     items, problems = [], []
     for source in sources:
         try:
@@ -101,7 +101,7 @@ def discover(fetcher: Fetcher, sources: list[dict], now: datetime) -> tuple[list
             if source.get("rss"):
                 try:
                     feed = feedparser.parse(fetcher.get(source["rss"]))
-                    for entry in feed.entries[:40]:
+                    for entry in feed.entries[:100]:
                         found.append({
                             "site": source["name"],
                             "title": entry.get("title", "").strip(),
@@ -142,9 +142,10 @@ def article_text(fetcher: Fetcher, url: str) -> tuple[str, datetime | None]:
     soup = BeautifulSoup(fetcher.get(url, cache=False), "html.parser")
     meta = soup.find("meta", attrs={"property": "article:published_time"}) or soup.find("meta", attrs={"itemprop": "datePublished"})
     published = _when(meta.get("content")) if meta else None
-    if published is None and (tag := soup.find("time", attrs={"datetime": True})):
+    article = next((a for a in soup.find_all("article") if not a.find_parent(["aside", "nav", "footer", "form"])), None)
+    if published is None and article and (tag := article.find("time", attrs={"datetime": True})):
         published = _when(tag["datetime"])
     for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
         tag.decompose()
-    body = soup.find("article") or soup.body or soup
+    body = article or soup.body or soup
     return " ".join(p.get_text(" ", strip=True) for p in body.find_all("p"))[:12000], published

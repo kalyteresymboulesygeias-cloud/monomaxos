@@ -12,6 +12,7 @@ from . import checks, linking, namedays, render, sources, unsplash, util
 from .budget import Budget, BudgetExceeded
 from .content import ContentIndex
 from .gemini import Article, Gemini, GenerationError, Verdict
+from .openai_llm import OpenAIWriter
 from .prompts import STYLE, TYPE_RULES, VALIDATOR
 
 VALIDATED = {"news", "lifestyle", "gossip", "health", "nutrition"}
@@ -23,8 +24,9 @@ class Skip(Exception):
 
 
 class Runner:
-    def __init__(self, day: date, *, dry_run: bool, commit: bool, gemini=None, fetcher=None, http=None, log=print):
+    def __init__(self, day: date, *, dry_run: bool, commit: bool, gemini=None, fetcher=None, http=None, log=print, rewrite: dict | None = None):
         self.day = day
+        self.rewrite = rewrite
         self.dry = dry_run
         self.commit = commit and not dry_run
         self.ctx = ContentIndex(config.CONTENT_DIR)
@@ -38,9 +40,12 @@ class Runner:
         self.records: list[dict] = []
 
     @property
-    def gemini(self) -> Gemini:
+    def gemini(self) -> Gemini | OpenAIWriter:
         if self._gemini is None:
-            self._gemini = Gemini(self.budget)
+            provider = config.env("AI_PROVIDER").lower() or ("openai" if config.env("OPENAI_API_KEY") else "gemini")
+            if provider not in ("openai", "gemini"):
+                raise SystemExit("AI_PROVIDER must be openai or gemini")
+            self._gemini = OpenAIWriter(self.budget) if provider == "openai" else Gemini(self.budget)
         return self._gemini
 
     # ---------- planning ----------
@@ -50,7 +55,29 @@ class Runner:
         rows = [json.loads(l) for l in (config.STATE_DIR / "runs.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()] if (config.STATE_DIR / "runs.jsonl").exists() else []
         return sum(1 for r in rows if r.get("type") == kind and r.get("date") == self.day.isoformat() and r.get("status") == "PASS")
 
+    def plan_rewrite(self, kind: str) -> dict:
+        """Fresh text for an existing post: same slug, date and category."""
+        post = self.rewrite
+        today = util.greek_date(self.day)
+        plan: dict = {"type": kind, "category": post["categories"][0], "slug": post["slug"], "update": True, "date": post["date"],
+                      "topic": post["title"], "context": "", "source_texts": [], "sources": []}
+        if kind == "eortologio":
+            data = namedays.for_day(self.day)
+            if not data["names"]:
+                raise Skip("δεν υπάρχουν ονόματα για την ημέρα στα δεδομένα")
+            plan["names"] = set(data["names"])
+            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False)
+        elif kind == "zodia":
+            plan["previous"] = [self.ctx.body_text(i["slug"]) for i in self.ctx.recent({407}, 7, self.day) if i["slug"] != post["slug"]]
+            plan["context"] = f"Ημέρα: {today}."
+        else:
+            plan["context"] = (f"Θέμα: {post['title']}.\nΓράψε από την αρχή νέο, πρωτότυπο άρθρο για αυτό το θέμα, με δική σου δομή.\n"
+                               f"Σημερινή ημερομηνία: {util.greek_date(util.now_athens().date())}.")
+        return plan
+
     def plan(self, kind: str, slot: int) -> dict:
+        if self.rewrite:
+            return self.plan_rewrite(kind)
         plan: dict = {"type": kind, "category": config.CATEGORY_BY_TYPE[kind], "slug": None, "update": False, "context": "", "source_texts": [], "sources": []}
         when = datetime.fromisoformat(f"{self.day.isoformat()}T{config.PUBLISH_TIME[kind]}:00") + timedelta(hours=2 * slot)
         plan["date"] = util.stamp(when)
@@ -96,33 +123,51 @@ class Runner:
             if not group:
                 raise Skip(f"δεν έχουν οριστεί πηγές για {kind} στο scripts/sources.json")
             fetcher = self.fetcher or sources.Fetcher()
-            items, problems = sources.discover(fetcher, group, util.now_athens())
+            max_age = config.SOURCE_MAX_AGE_HOURS_BY_TYPE.get(kind, config.SOURCE_MAX_AGE_HOURS)
+            items, problems = sources.discover(fetcher, group, util.now_athens(), max_age)
             if not items:
                 raise sources.SourceError("καμία πηγή δεν απάντησε: " + "; ".join(problems[:3]))
             covered = [i["title"] for i in self.ctx.recent({config.CATEGORY_BY_TYPE[kind]}, config.NEWS_TOPIC_WINDOW_DAYS, self.day)]
             covered += [t["topic"] for t in (util.read_json(config.STATE_DIR / "topics.json", {}) or {}).get("topics", [])]
-            groups = [g for g in sources.cluster(items, covered) if len({i["site"] for i in g}) >= 2]
+            skip_roots = [util.fold(r) for r in self.blocked["roots"]] + ["ζωδι"]
+            groups = [
+                g for g in sources.cluster(items, covered)
+                if len({i["site"] for i in g}) >= 2 and not any(r in util.fold(g[0]["title"]) for r in skip_roots)
+            ]
             if len(groups) <= slot:
                 raise Skip("κανένα θέμα δεν καλύπτεται από ≥2 διαφορετικά sites")
             chosen = groups[slot]
-            texts, used = [], []
-            cutoff = util.now_athens() - timedelta(hours=config.SOURCE_MAX_AGE_HOURS)
-            for item in {i["site"]: i for i in chosen}.values():
-                try:
-                    text, published = sources.article_text(fetcher, item["url"])
-                except sources.SourceError:
-                    continue
-                when = item["date"] or published
-                if when is None or when < cutoff:
-                    continue
-                texts.append(text)
-                used.append(item["url"])
+            texts, used, dates = [], [], []
+            cutoff = util.now_athens() - timedelta(hours=max_age)
+            lead = chosen[0]["title"]
+            by_site: dict[str, list[dict]] = {}
+            for i in sorted(chosen, key=lambda i: -util.similarity(i["title"], lead)):
+                by_site.setdefault(i["site"], []).append(i)
+            for candidates in by_site.values():
+                for item in candidates:
+                    try:
+                        text, published = sources.article_text(fetcher, item["url"])
+                    except sources.SourceError:
+                        continue
+                    known = [d for d in (item["date"], published) if d]
+                    when = min(known) if known else None
+                    if when is None or when < cutoff:
+                        continue
+                    texts.append(text)
+                    used.append(item["url"])
+                    dates.append(when.astimezone(util.ATHENS).date().isoformat())
+                    break
             if len(texts) < 2:
                 raise sources.SourceError("δεν κατέβηκαν κείμενα από ≥2 sites")
             plan["topic"] = chosen[0]["title"]
             plan["source_texts"] = texts
             plan["sources"] = used
-            plan["context"] = "Κείμενα πηγών (μόνο για ενημέρωση, ΜΗΝ τα αντιγράψεις):\n" + "\n\n".join(f"[{u}]\n{t[:5000]}" for u, t in zip(used, texts))
+            plan["source_basis"] = f"Σημερινή ημερομηνία: {today}.\n" + "\n\n".join(f"[{u}] (δημοσίευση: {d})\n{t[:5000]}" for u, d, t in zip(used, dates, texts))
+            plan["context"] = (
+                f"Σημερινή ημερομηνία: {today}. Αν η είδηση είναι παλαιότερη, μην τη γράψεις σαν σημερινή.\n"
+                "Κείμενα πηγών (μόνο για ενημέρωση, ΜΗΝ τα αντιγράψεις):\n"
+                + "\n\n".join(f"[{u}] (δημοσίευση: {d})\n{t[:5000]}" for u, d, t in zip(used, dates, texts))
+            )
         return plan
 
     # ---------- generation ----------
@@ -161,7 +206,7 @@ class Runner:
     def review(self, kind: str, plan: dict, article: Article, html: str) -> list[str]:
         if kind not in VALIDATED:
             return []
-        basis = "Κείμενα πηγών:\n" + "\n\n".join(t[:5000] for t in plan["source_texts"]) if kind in NEWS else "Βάση: γενικά αποδεκτή ιατρική γνώση."
+        basis = "Κείμενα πηγών:\n" + plan.get("source_basis", "\n\n".join(t[:5000] for t in plan["source_texts"])) if kind in NEWS else "Βάση: γενικά αποδεκτή ιατρική γνώση."
         verdict = self.gemini.generate(VALIDATOR, f"Τύπος: {kind}\nΤίτλος: {article.title}\n\nΚείμενο:\n{util.html_text(html)}\n\n{basis}", Verdict)
         return [] if verdict.verdict == "PASS" else ["AI ελεγκτής: " + "; ".join(verdict.reasons or ["FAIL"])]
 
@@ -196,7 +241,7 @@ class Runner:
             reasons = self.review(kind, plan, article, html)
             if reasons:
                 raise GenerationError("; ".join(reasons))
-            category = config.HEALTH_SUBCATEGORIES.get(article.subcategory or "", plan["category"]) if kind == "health" else plan["category"]
+            category = config.HEALTH_SUBCATEGORIES.get(article.subcategory or "", plan["category"]) if kind == "health" and not self.rewrite else plan["category"]
             alt = (article.image_alts or [article.title])[0]
             image, photo_id, info = unsplash.pick_image(article.image_queries, alt, category, self.budget, dry_run=self.dry, session=self.http)
             record["image"] = info
