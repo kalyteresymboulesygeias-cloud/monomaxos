@@ -142,7 +142,7 @@ def article_text(fetcher: Fetcher, url: str) -> tuple[str, datetime | None]:
     soup = BeautifulSoup(fetcher.get(url, cache=False), "html.parser")
     meta = soup.find("meta", attrs={"property": "article:published_time"}) or soup.find("meta", attrs={"itemprop": "datePublished"})
     published = _when(meta.get("content")) if meta else None
-    article = soup.find("article")
+    article = next((a for a in soup.find_all("article") if not a.find_parent(["aside", "nav", "footer", "form"])), None)
     if published is None and article and (tag := article.find("time", attrs={"datetime": True})):
         published = _when(tag["datetime"])
     for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
