@@ -84,11 +84,13 @@ jobs:
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
       - name: Pick article types
         id: plan
+        env:
+          REWRITE: ${{ inputs.rewrite }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "types=${{ inputs.type }}" >> "$GITHUB_OUTPUT"
             echo "count=${{ inputs.count }}" >> "$GITHUB_OUTPUT"
-            if [ -n "${{ inputs.rewrite }}" ]; then echo "dry=true" >> "$GITHUB_OUTPUT"; else echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"; fi
+            if [ -n "${REWRITE:-}" ]; then echo "dry=true" >> "$GITHUB_OUTPUT"; else echo "dry=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"; fi
           else
             case "${{ github.event.schedule }}" in
               "0 4 * * *") types="eortologio zodia" ;;
