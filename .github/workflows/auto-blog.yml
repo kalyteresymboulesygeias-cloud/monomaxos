@@ -49,8 +49,8 @@ jobs:
       GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       AI_PROVIDER: ${{ vars.AI_PROVIDER }}
-      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.5' }}
-      OPENAI_FALLBACK_MODEL: ${{ vars.OPENAI_FALLBACK_MODEL || 'gpt-5.4-mini' }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-6.1-sol' }}
+      OPENAI_FALLBACK_MODEL: ${{ vars.OPENAI_FALLBACK_MODEL || 'gpt-6.1-terra' }}
       OPENAI_REASONING_EFFORT: ${{ vars.OPENAI_REASONING_EFFORT }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}

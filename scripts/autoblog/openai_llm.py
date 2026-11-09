@@ -62,8 +62,9 @@ class OpenAIWriter:
         if not self.model:
             raise SystemExit("OPENAI_MODEL is empty. Set it as a GitHub Actions variable.")
         effort = config.env("OPENAI_REASONING_EFFORT").lower()
-        if effort and effort not in ("minimal", "low", "medium", "high"):
-            raise SystemExit("OPENAI_REASONING_EFFORT must be minimal, low, medium or high")
+        efforts = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+        if effort and effort not in efforts:
+            raise SystemExit("OPENAI_REASONING_EFFORT must be one of " + ", ".join(efforts))
         self.effort = effort
         self.budget = budget
         if client is None:
