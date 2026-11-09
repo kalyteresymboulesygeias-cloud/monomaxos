@@ -31,7 +31,7 @@ def strict_schema(schema: type[BaseModel]) -> dict[str, Any]:
 
 
 def _quota(exc: Exception) -> bool:
-    return isinstance(exc, openai.RateLimitError) and getattr(exc, "code", None) == "insufficient_quota"
+    return isinstance(exc, openai.RateLimitError) and getattr(exc, "code", None) in ("insufficient_quota", "credit_balance_exhausted")
 
 
 def _retryable(exc: Exception) -> bool:

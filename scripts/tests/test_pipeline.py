@@ -207,10 +207,11 @@ class OpenAIWriterTests(unittest.TestCase):
 
     def test_insufficient_quota_goes_to_fallback(self):
         import openai
-        quota = self.error(openai.RateLimitError, 429, {"code": "insufficient_quota"})
-        writer, calls = self.writer([quota, self.ok('{"verdict": "FAIL", "reasons": ["x"]}')])
-        self.assertEqual(writer.generate("s", "p", Verdict).verdict, "FAIL")
-        self.assertEqual(calls, ["gpt-main", "gpt-backup"])
+        for code in ("insufficient_quota", "credit_balance_exhausted"):
+            quota = self.error(openai.RateLimitError, 429, {"code": code})
+            writer, calls = self.writer([quota, self.ok('{"verdict": "FAIL", "reasons": ["x"]}')])
+            self.assertEqual(writer.generate("s", "p", Verdict).verdict, "FAIL")
+            self.assertEqual(calls, ["gpt-main", "gpt-backup"])
 
     def test_bad_request_is_not_retried(self):
         import openai
