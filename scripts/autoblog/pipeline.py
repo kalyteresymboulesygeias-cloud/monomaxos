@@ -106,13 +106,22 @@ class Runner:
                 raise sources.SourceError("καμία πηγή δεν απάντησε: " + "; ".join(problems[:3]))
             covered = [i["title"] for i in self.ctx.recent({config.CATEGORY_BY_TYPE[kind]}, config.NEWS_TOPIC_WINDOW_DAYS, self.day)]
             covered += [t["topic"] for t in (util.read_json(config.STATE_DIR / "topics.json", {}) or {}).get("topics", [])]
-            groups = [g for g in sources.cluster(items, covered) if len({i["site"] for i in g}) >= 2]
+            skip_roots = [util.fold(r) for r in self.blocked["roots"]] + ["ζωδι"]
+            groups = [
+                g for g in sources.cluster(items, covered)
+                if len({i["site"] for i in g}) >= 2 and not any(r in util.fold(g[0]["title"]) for r in skip_roots)
+            ]
             if len(groups) <= slot:
                 raise Skip("κανένα θέμα δεν καλύπτεται από ≥2 διαφορετικά sites")
             chosen = groups[slot]
             texts, used, dates = [], [], []
             cutoff = util.now_athens() - timedelta(hours=max_age)
-            for item in {i["site"]: i for i in chosen}.values():
+            lead = chosen[0]["title"]
+            best: dict[str, dict] = {}
+            for i in chosen:
+                if i["site"] not in best or util.similarity(i["title"], lead) > util.similarity(best[i["site"]]["title"], lead):
+                    best[i["site"]] = i
+            for item in best.values():
                 try:
                     text, published = sources.article_text(fetcher, item["url"])
                 except sources.SourceError:
