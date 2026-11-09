@@ -44,6 +44,9 @@ def rewrite(slug: str) -> int:
         print(f"[FAIL] rewrite {slug}: δεν υπάρχει")
         return 1
     category = post["categories"][0]
+    if category == config.LIFESTYLE_CATEGORY_ID:
+        print(f"[FAIL] rewrite {slug}: τα lifestyle βασίζονται σε πηγές και δεν ξαναγράφονται")
+        return 1
     kind = {406: "eortologio", 407: "zodia"}.get(category, "health")
     day = date.fromisoformat(post["date"][:10]) if kind in ("eortologio", "zodia") else util.now_athens().date()
     runner = Runner(day, dry_run=True, commit=False, rewrite=post)
