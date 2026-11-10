@@ -49,7 +49,7 @@ def _internal_slug(href: str) -> str | None:
 
 def fix_links(html: str, *, kind: str, known_slugs: set[str], self_slug: str | None) -> tuple[str, dict]:
     soup = BeautifulSoup(html, "html.parser")
-    stats = {"internal": 0, "removed_internal": 0, "removed_external": 0}
+    stats = {"internal": 0, "official": 0, "removed_internal": 0, "removed_external": 0}
     for a in soup.find_all("a"):
         href = (a.get("href") or "").strip()
         slug = _internal_slug(href)
@@ -61,9 +61,10 @@ def fix_links(html: str, *, kind: str, known_slugs: set[str], self_slug: str | N
             stats["removed_internal"] += 1
             a.unwrap()
             continue
-        host = urlparse(href).netloc.lower()
-        official = kind in ("health", "nutrition") and any(host == d or host.endswith("." + d) for d in config.OFFICIAL_DOMAINS)
+        host = urlparse(href).netloc.lower().removeprefix("www.")
+        official = kind not in ("zodia", "eortologio") and any(host == d or host.endswith("." + d) for d in config.OFFICIAL_DOMAINS)
         if official and href.startswith("https://"):
+            stats["official"] += 1
             continue
         stats["removed_external"] += 1
         a.unwrap()
