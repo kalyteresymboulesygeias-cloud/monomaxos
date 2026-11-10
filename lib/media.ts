@@ -3,9 +3,9 @@ import path from "node:path";
 
 // Render-time media rewrite. content/media-map.json is written by scripts/migrate-images.mjs
 // ({ "https://www.monomaxos.gr/wp-content/uploads/..": "/wp-content/uploads/.." }).
-// Only migrated URLs are rewritten; others stay pointing at www.monomaxos.gr.
-// NEXT_PUBLIC_MEDIA_BASE prefixes rewritten /wp-content/uploads/... paths (Cloudflare R2).
-// empty = serve those paths from this app's /public. Unmapped URLs are left unchanged.
+// Migrated uploads are served from media.monomaxos.gr (R2 custom domain), so the
+// browser does not fetch them through Vercel. /media remains a fallback rewrite
+// to the r2.dev host for links already in the wild.
 let _map: Record<string, string> | null = null;
 function getMap() {
   if (_map) return _map;
@@ -15,19 +15,27 @@ function getMap() {
   _map = Object.fromEntries(Object.entries(raw).map(([k, v]) => [norm(k), encodeURI(safeDecode(v))]));
   return _map;
 }
-const BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE || "").replace(/\/$/, "");
 const UPLOADS = "/wp-content/uploads";
-/** Some mobile networks refuse *.r2.dev, so R2 files are served same-origin via the /media rewrite. */
+/** Public R2 hostname. A normal domain, so it is not blocked the way r2.dev is. */
+const PUBLIC_MEDIA = "https://media.monomaxos.gr";
 const BUCKET_R2_DEV = "https://pub-6eb02a9bf9ab4841b691105e6721ab5e.r2.dev";
-export const R2_ORIGIN = BASE || BUCKET_R2_DEV;
+/** Legacy /media rewrite target. New pages do not use this path. */
+export const R2_ORIGIN = BUCKET_R2_DEV;
 export const MEDIA_PROXY = "/media";
 const R2_URL = /https:\/\/pub-[a-z0-9]+\.r2\.dev\/wp-content\/uploads\/[^\s"'<>),]+/g;
+
+function publicUpload(pathname: string, search = "") {
+  return `${PUBLIC_MEDIA}${pathname}${search}`;
+}
 
 function proxied(u: string) {
   try {
     const url = new URL(u);
-    const bucket = url.origin === BUCKET_R2_DEV || url.origin === new URL(R2_ORIGIN).origin;
-    if (bucket && url.pathname.startsWith(`${UPLOADS}/`)) return MEDIA_PROXY + url.pathname.slice(UPLOADS.length) + url.search;
+    const onBucket = url.origin === BUCKET_R2_DEV || url.origin === PUBLIC_MEDIA;
+    if (onBucket && url.pathname.startsWith(`${UPLOADS}/`)) {
+      if (url.origin === PUBLIC_MEDIA) return u;
+      return publicUpload(url.pathname, url.search);
+    }
   } catch {
     /* not an absolute URL */
   }
@@ -41,8 +49,7 @@ export function mediaUrl(u: string | null | undefined): string | undefined;
 export function mediaUrl(u: string | null | undefined) {
   if (!u) return undefined;
   const rel = getMap()[norm(u)];
-  // Empty BASE serves migrated uploads from /public, so only R2-backed paths go through /media.
-  if (rel) return BASE && rel.startsWith(`${UPLOADS}/`) ? MEDIA_PROXY + rel.slice(UPLOADS.length) : rel;
+  if (rel?.startsWith(`${UPLOADS}/`)) return publicUpload(rel);
   return proxied(u);
 }
 export function rewriteMedia(html: string) {
