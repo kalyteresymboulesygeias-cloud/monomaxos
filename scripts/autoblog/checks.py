@@ -164,12 +164,25 @@ def eortologio_names(html: str, allowed: set[str]) -> list[str]:
     if not cells:
         return ["λείπει λίστα ή πίνακας με τα ονόματα της ημέρας"]
     ok = {util.fold(n) for n in allowed}
+    calendar = {util.fold(w) for w in (*util.GREEK_DAYS, *util.GREEK_MONTHS_GEN, "χρόνια", "πολλά")}
     fails = []
+    saw_name = False
     for cell in cells:
-        for name in CAPITALIZED.findall(cell.get_text(" ", strip=True)):
-            if util.fold(name) not in ok and util.fold(name) not in NAME_WORDS:
+        text = cell.get_text(" ", strip=True)
+        words = text.split()
+        # Instruction bullets are sentences. Name cells are short lists.
+        if len(words) > 8:
+            continue
+        caps = CAPITALIZED.findall(text)
+        if not caps or len(caps) * 2 < len(words):
+            continue
+        for name in caps:
+            folded = util.fold(name)
+            if folded in ok:
+                saw_name = True
+            elif folded not in NAME_WORDS and folded not in calendar:
                 fails.append(f"άγνωστο όνομα στο εορτολόγιο: {name}")
-    if not any(util.fold(n) in util.fold(soup.get_text(" ", strip=True)) for n in allowed):
+    if not saw_name and not any(util.fold(n) in util.fold(soup.get_text(" ", strip=True)) for n in allowed):
         fails.append("δεν εμφανίζεται κανένα όνομα από το εορτολόγιο της ημέρας")
     return fails
 
