@@ -197,7 +197,12 @@ class Runner:
                 article, html,
                 disclaimer=("αποποίηση ευθύνης", "δεν αποτελούν θεολογική ερμηνεία"),
             )
-        if links["internal"] < 1:
+        if kind in EDITORIAL_KINDS:
+            if not 1 <= links["internal"] <= 2:
+                fails.append(f"εσωτερικοί σύνδεσμοι {links['internal']}, ζητούνται 1-2 από τη λίστα")
+            if not 1 <= links["official"] <= 2:
+                fails.append(f"σύνδεσμοι αυθεντικών φορέων {links['official']}, ζητούνται 1-2")
+        elif links["internal"] < 1:
             fails.append("χρειάζεται τουλάχιστον ένας έγκυρος εσωτερικός σύνδεσμος από τη λίστα")
         if kind == "eortologio":
             fails += checks.eortologio_names(html, plan["names"])
@@ -217,8 +222,11 @@ class Runner:
     def write(self, kind: str, plan: dict) -> tuple[Article, str, str]:
         cands = linking.candidates(self.ctx, plan["category"], plan["topic"], exclude=plan["slug"])
         links = "\n".join(f"- {c['title']}: {config.SITE}/{c['slug']}/" for c in cands)
+        domains = ", ".join(config.OFFICIAL_DOMAINS)
         link_note = (
-            "\n\nΒάλε 2 εσωτερικούς συνδέσμους <a href> μόνο προς διευθύνσεις από την παρακάτω λίστα, μέσα σε προτάσεις. Μην αλλάξεις τη δομή."
+            f"\n\nΥπενθύμιση συνδέσμων: 1-2 εσωτερικά <a href> μόνο από την παρακάτω λίστα και 1-2 <a href> προς {domains}."
+            if kind in EDITORIAL_KINDS
+            else ""
         )
         prompt = f"{TYPE_RULES[kind]}\n\n{plan['context']}{link_note}\n\nΥποψήφιοι εσωτερικοί σύνδεσμοι:\n{links}"
         system = system_prompt(kind)

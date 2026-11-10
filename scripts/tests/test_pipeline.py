@@ -111,6 +111,11 @@ class NegativeChecks(unittest.TestCase):
         self.assertEqual(html, "<p>κείμενο</p>")
         self.assertEqual(stats["removed_external"], 1)
 
+    def test_official_link_kept_in_lifestyle(self):
+        html, stats = render.fix_links('<p><a href="https://www.who.int/news">ΠΟΥ</a></p>', kind="lifestyle", known_slugs=set(), self_slug=None)
+        self.assertIn("who.int", html)
+        self.assertEqual(stats["official"], 1)
+
     def test_official_link_kept_in_health(self):
         html, _ = render.fix_links('<p><a href="https://eody.gov.gr/a">ΕΟΔΥ</a></p>', kind="health", known_slugs=set(), self_slug=None)
         self.assertIn("eody.gov.gr", html)
