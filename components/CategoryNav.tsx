@@ -15,13 +15,17 @@ export default function CategoryNav({
   onNavigate,
   className = "",
   itemClassName = "",
+  tone = "ink",
 }: {
   categories: NavCategory[];
   onNavigate?: () => void;
   className?: string;
   itemClassName?: string;
+  tone?: "ink" | "paper";
 }) {
   const path = usePathname() || "/";
+  const idle = tone === "paper" ? "text-paper/80 hover:text-paper" : "text-ink hover:text-pine";
+  const current = tone === "paper" ? "text-paper" : "text-pine";
   return (
     <nav aria-label="Κατηγορίες" className={className}>
       {categories.map((category) => {
@@ -32,7 +36,7 @@ export default function CategoryNav({
             href={`/category/${category.slug}`}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
-            className={`transition-colors hover:text-pine ${active ? "text-pine" : "text-ink"} ${itemClassName}`}
+            className={`transition-colors ${active ? current : idle} ${itemClassName}`}
           >
             {category.name}
           </Link>
