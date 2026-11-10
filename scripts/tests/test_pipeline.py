@@ -36,20 +36,33 @@ def filler(seed: int, n: int) -> str:
 
 
 def zodia_article(link_slug: str) -> Article:
-    parts = [
-        "Τα ζώδια σήμερα είναι ψυχαγωγικό περιεχόμενο για μια ήσυχη Δευτέρα. " + filler(1, 40),
-        f"Δείτε και τον [οδηγό μας]({config.SITE}/{link_slug}/). " + filler(2, 20),
-    ]
-    for i, sign in enumerate(SIGNS):
-        parts.append(f"## {sign}\n\n" + filler(i + 3, 55))
-    parts.append("## Πώς να τα διαβάσετε\n\n" + filler(40, 40))
-    parts.append("## Σύντομες ερωτήσεις\n\n### Είναι πρόβλεψη;\n\n" + filler(41, 30))
+    signs = "".join(f"<tr><td>{sign}</td><td>μικρή καθημερινή ιδέα</td></tr>" for sign in SIGNS)
+    questions = "".join(f"<h3>Ερώτηση {i} για τα ζώδια σήμερα;</h3><p>{filler(50 + i, 55)}</p>" for i in range(1, 6))
+    sections = "".join(
+        f"<h2>Ζώδια σήμερα, ενότητα {i}</h2><p>{filler(10 + i, 160)}</p>" for i in range(1, 5)
+    )
+    body = f"""
+<p>Στην αρχαία παράδοση ο ζωδιακός κύκλος μοίραζε τον χρόνο σε δώδεκα τόξα. Ζώδια σήμερα, λοιπόν, διαβάζονται ως παιχνίδι της ημέρας και όχι ως οδηγία. {filler(1, 70)}</p>
+<ul>
+<li><strong>Διαβάζεις για ευχαρίστηση.</strong> Δεν είναι πρόβλεψη.</li>
+<li><strong>Κρατάς ό,τι σου ταιριάζει.</strong> Αφήνεις τα υπόλοιπα.</li>
+<li><strong>Δεν αλλάζεις απόφαση.</strong> Η μέρα σου μένει δική σου.</li>
+<li><strong>Κοιτάς και τα δώδεκα.</strong> Κάθε ζώδιο έχει τη δική του γραμμή.</li>
+</ul>
+{sections}
+<table><thead><tr><th>Ζώδιο</th><th>Σημείωση</th></tr></thead><tbody>{signs}</tbody></table>
+<ol><li>Διάβασε το δικό σου ζώδιο.</li><li>Κράτα μία ιδέα.</li><li>Συνέχισε τη μέρα σου.</li></ol>
+{questions}
+<h2>Τι Κάνεις Τώρα</h2>
+<p>Δες και τον <a href="{config.SITE}/{link_slug}/">οδηγό</a>. {filler(80, 40)}</p>
+<p><em>Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ψυχαγωγικό και ενημερωτικό χαρακτήρα. Η αστρολογία δεν αποτελεί επιστήμη και δεν πρέπει να χρησιμοποιείται ως βάση για σημαντικές αποφάσεις. Οι πληροφορίες προέρχονται από την αστρολογική παράδοση και τις δημοφιλείς ερμηνείες.</em></p>
+"""
     return Article(
         title="Ζώδια σήμερα: μια ήρεμη Δευτέρα για όλους",
         meta_description="Τα ζώδια σήμερα για Κριό έως Ιχθύες, με ψυχαγωγική ματιά και μικρές ιδέες για μια ήρεμη Δευτέρα χωρίς υπερβολές και χωρίς απόλυτες προβλέψεις για κανέναν.",
         focus_keyword="Ζώδια σήμερα",
         excerpt="Ψυχαγωγική ματιά στα ζώδια της ημέρας.",
-        body_markdown="\n\n".join(parts),
+        body_markdown=body,
         image_queries=["calm morning sky", "notebook on table", "city at dawn"],
         image_alts=["Ήρεμος πρωινός ουρανός"],
     )
@@ -140,8 +153,8 @@ class EndToEnd(unittest.TestCase):
         slug = first.records[0]["slug"]
         self.assertEqual(slug, "zodia-simera-deytera-8-noemvrioy-2027")
         post = ContentIndex(config.CONTENT_DIR).posts[slug]
-        self.assertIn("ψυχαγωγικό χαρακτήρα", post["content"]["rendered"])
-        self.assertNotIn("Αποποίηση ευθύνης", post["content"]["rendered"])
+        self.assertIn("ψυχαγωγικό και ενημερωτικό χαρακτήρα", post["content"]["rendered"])
+        self.assertIn("δεν αποτελεί επιστήμη", post["content"]["rendered"])
         second = Runner(day, dry_run=False, commit=False, gemini=fake, log=lambda *_: None)
         second.run("zodia", 1)
         self.assertEqual(second.records[0]["status"], "SKIP")

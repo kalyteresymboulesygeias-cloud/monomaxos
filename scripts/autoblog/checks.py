@@ -36,11 +36,8 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
         fails.append("το focus keyword λείπει από τις πρώτες 100 λέξεις")
     everything = " ".join([article.title, article.meta_description, article.excerpt, util.html_text(html)])
     dashes = everything.count("\u2014")
-    if kind in ("health", "nutrition", "news", "lifestyle", "gossip"):
-        if dashes > 2:
-            fails.append(f"em dash (—) {dashes} φορές, μέγιστο 2")
-    elif dashes:
-        fails.append("υπάρχει em dash (—)")
+    if dashes > 2:
+        fails.append(f"em dash (—) {dashes} φορές, μέγιστο 2")
     if PLACEHOLDERS.search(everything):
         fails.append("υπάρχει placeholder ([, ], TODO, lorem, XX)")
     for phrase in CLICHES:
@@ -98,8 +95,14 @@ EDITORIAL_CLICHES = (
 )
 
 
-def editorial_structure(article, html: str) -> list[str]:
-    """The house template for every article except eortologio and zodia."""
+def editorial_structure(
+    article,
+    html: str,
+    *,
+    disclaimer: tuple[str, ...] = ("αποποίηση ευθύνης", "δεν αποτελεί ιατρική συμβουλή"),
+    extra_cliches: tuple[str, ...] = (),
+) -> list[str]:
+    """House template: takeaways, sections, steps, five questions, a real closing title, disclaimer."""
     from bs4 import BeautifulSoup
 
     fails: list[str] = []
@@ -126,7 +129,7 @@ def editorial_structure(article, html: str) -> list[str]:
         fails.append("μην τιτλοφορείς το κλείσιμο σκέτο «Συμπέρασμα»")
     if len(soup.find_all("h3")) < 5:
         fails.append("οι συχνές ερωτήσεις χρειάζονται 5 ερωτήσεις σε H3")
-    if util.fold("αποποίηση ευθύνης") not in folded or util.fold("δεν αποτελεί ιατρική συμβουλή") not in folded:
+    if any(util.fold(mark) not in folded for mark in disclaimer):
         fails.append("λείπει η αποποίηση ευθύνης στο τέλος")
     key = util.fold(article.focus_keyword).strip()
     if key and sum(key in title for title in titles) < 2:
@@ -138,7 +141,7 @@ def editorial_structure(article, html: str) -> list[str]:
             before.append(sib.get_text(" ", strip=True) if hasattr(sib, "get_text") else str(sib))
         if len(" ".join(reversed(before)).split()) > 220:
             fails.append("το πρώτο H2 είναι μετά τις πρώτες 200 λέξεις")
-    for phrase in EDITORIAL_CLICHES:
+    for phrase in (*EDITORIAL_CLICHES, *extra_cliches):
         if f" {util.fold(phrase)} " in padded:
             fails.append(f"κλισέ λέξη: {phrase}")
             break
@@ -150,28 +153,32 @@ def source_overlap(html: str, source_texts: list[str]) -> list[str]:
     return [f"κοινή ακολουθία 8+ λέξεων με πηγή: «{s}»" for s in shared]
 
 
+NAME_WORDS = {"και", "σημερα", "οι", "η", "ο", "αγιοσ", "αγια", "αγιου", "αγιασ", "αγιοι", "οσιοσ", "οσια"}
+
+
 def eortologio_names(html: str, allowed: set[str]) -> list[str]:
-    part = render.section(html, "Ποιοι γιορτάζουν")
-    if part is None:
-        return ["λείπει η ενότητα «Ποιοι γιορτάζουν σήμερα»"]
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    cells = soup.find_all(["li", "td"])
+    if not cells:
+        return ["λείπει λίστα ή πίνακας με τα ονόματα της ημέρας"]
     ok = {util.fold(n) for n in allowed}
     fails = []
-    for li in part.find_all("li") or part.find_all("p"):
-        for name in CAPITALIZED.findall(li.get_text(" ", strip=True)):
-            if util.fold(name) not in ok and util.fold(name) not in {"και", "σημερα", "οι", "η", "ο"}:
+    for cell in cells:
+        for name in CAPITALIZED.findall(cell.get_text(" ", strip=True)):
+            if util.fold(name) not in ok and util.fold(name) not in NAME_WORDS:
                 fails.append(f"άγνωστο όνομα στο εορτολόγιο: {name}")
+    if not any(util.fold(n) in util.fold(soup.get_text(" ", strip=True)) for n in allowed):
+        fails.append("δεν εμφανίζεται κανένα όνομα από το εορτολόγιο της ημέρας")
     return fails
 
 
-def zodia_structure(html: str) -> list[str]:
-    titles = [util.fold(t) for t in render.h2_titles(html)]
-    expected = [util.fold(z) for z in ZODIA_ORDER] + [util.fold("Πώς να τα διαβάσετε"), util.fold("Σύντομες ερωτήσεις")]
-    found = [t for t in titles if any(e in t for e in expected)]
-    if len(found) != 14 or any(e not in f for e, f in zip(expected, found)):
-        return ["τα ζώδια χρειάζονται 12 H2 με σειρά Κριός έως Ιχθύες, μετά «Πώς να τα διαβάσετε» και «Σύντομες ερωτήσεις»"]
-    intro = util.fold(" ".join(render.paragraphs(html, 2)))
-    if "ψυχαγωγ" not in intro:
-        return ["η εισαγωγή πρέπει να δηλώνει ότι τα ζώδια είναι ψυχαγωγικό περιεχόμενο"]
+def zodia_signs(html: str) -> list[str]:
+    folded = util.fold(util.html_text(html))
+    missing = [sign for sign in ZODIA_ORDER if util.fold(sign) not in folded]
+    if missing:
+        return ["λείπουν ζώδια: " + ", ".join(missing)]
     return []
 
 

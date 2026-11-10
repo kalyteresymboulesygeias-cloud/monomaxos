@@ -44,11 +44,14 @@ const BANNED_KEYS = [
 const MEDICAL_DISCLAIMER_TEXT =
   "Αποποίηση ευθύνης: Αυτό το άρθρο έχει αποκλειστικά εκπαιδευτικό και ενημερωτικό χαρακτήρα. Δεν αποτελεί ιατρική συμβουλή. Πάντα να συμβουλεύεστε τον γιατρό σας πριν από οποιαδήποτε αλλαγή στη διατροφή, στη λήψη συμπληρωμάτων ή στον τρόπο ζωής σας, ιδιαίτερα εάν λαμβάνετε φάρμακα ή έχετε χρόνιες παθήσεις.";
 const ENTERTAINMENT_DISCLAIMER_TEXT =
-  "Τα ζώδια έχουν ψυχαγωγικό χαρακτήρα. Δεν αποτελούν πρόβλεψη και δεν αντικαθιστούν συμβουλή γιατρού, οικονομικού συμβούλου ή άλλου ειδικού.";
+  "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ψυχαγωγικό και ενημερωτικό χαρακτήρα. Η αστρολογία δεν αποτελεί επιστήμη και δεν πρέπει να χρησιμοποιείται ως βάση για σημαντικές αποφάσεις. Οι πληροφορίες προέρχονται από την αστρολογική παράδοση και τις δημοφιλείς ερμηνείες.";
+const TRADITION_DISCLAIMER_TEXT =
+  "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ενημερωτικό και πολιτιστικό χαρακτήρα. Οι πληροφορίες βασίζονται στην ελληνική εκκλησιαστική παράδοση και το επίσημο εορτολόγιο. Δεν αποτελούν θεολογική ερμηνεία ή επίσημη θέση της Εκκλησίας.";
 const DISCLAIMER = `<p><em>${MEDICAL_DISCLAIMER_TEXT}</em></p>`;
 const DISCLAIMERS = {
   medical: { html: DISCLAIMER, present: /αποποίηση ευθύνης|δεν αντικαθιστά την ιατρική συμβουλή/i },
-  entertainment: { html: `<p><em>${ENTERTAINMENT_DISCLAIMER_TEXT}</em></p>`, present: /ψυχαγωγικό χαρακτήρα\. Δεν αποτελούν πρόβλεψη/i },
+  entertainment: { html: `<p><em>${ENTERTAINMENT_DISCLAIMER_TEXT}</em></p>`, present: /ψυχαγωγικό και ενημερωτικό χαρακτήρα|ψυχαγωγικό χαρακτήρα\. Δεν αποτελούν πρόβλεψη/i },
+  tradition: { html: `<p><em>${TRADITION_DISCLAIMER_TEXT}</em></p>`, present: /ενημερωτικό και πολιτιστικό χαρακτήρα/i },
   none: null,
 };
 const GREEK = {
@@ -249,7 +252,7 @@ function ensureHtml(value) {
 
 function resolveDisclaimer(value) {
   const kind = value == null || value === "" ? "medical" : String(value);
-  if (!Object.hasOwn(DISCLAIMERS, kind)) fail('disclaimer must be "medical", "entertainment" or "none"');
+  if (!Object.hasOwn(DISCLAIMERS, kind)) fail('disclaimer must be "medical", "entertainment", "tradition" or "none"');
   return kind;
 }
 
@@ -864,8 +867,8 @@ function selfTest() {
     { ...payload, slug: "zodia-dokimi", title: "Ζώδια δοκιμής με ψυχαγωγική σημείωση", meta_description: "Ψυχαγωγική δοκιμή ζωδίων χωρίς ιατρική αποποίηση στο τέλος του κειμένου.", disclaimer: "entertainment" },
     { contentDir: root, dryRun: true, mediaBase: "https://media.example.test" },
   );
-  assert.match(zodia.post.content.rendered, /ψυχαγωγικό χαρακτήρα/);
-  assert.doesNotMatch(zodia.post.content.rendered, /Αποποίηση ευθύνης/);
+  assert.match(zodia.post.content.rendered, /ψυχαγωγικό και ενημερωτικό χαρακτήρα/);
+  assert.doesNotMatch(zodia.post.content.rendered, /ιατρική συμβουλή/);
   const plainDay = publishArticle(
     { ...payload, slug: "xoris-dilosi", title: "Εορτολόγιο δοκιμής χωρίς καμία σημείωση", meta_description: "Δοκιμή εορτολογίου χωρίς αποποίηση ευθύνης στο τέλος του κειμένου.", disclaimer: "none" },
     { contentDir: root, dryRun: true, mediaBase: "https://media.example.test" },
