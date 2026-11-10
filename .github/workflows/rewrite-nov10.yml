@@ -37,13 +37,7 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
-          slugs="
-          kryologima-kai-ypnos-ton-noemvrio-pos-na-xekoyrasteite
-          ypnos-kai-kardia-ton-noemvrio-ti-na-prosexete-to-vrady
-          zodia-simera-triti-10-noemvrioy-2026
-          antiliako-ton-cheimona-pote-echei-noima
-          poioi-giortazoyn-simera-triti-10-noemvrioy-2026
-          "
+          slugs="zodia-simera-triti-10-noemvrioy-2026"
           for slug in $slugs; do
             python scripts/generate_articles.py --rewrite "$slug" --no-commit || failed=1
           done

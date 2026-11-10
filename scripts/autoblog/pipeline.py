@@ -188,7 +188,9 @@ class Runner:
         if kind == "eortologio":
             fails += checks.eortologio_names(html, plan["names"])
         if kind == "zodia":
-            fails += checks.zodia_structure(html) + checks.repetition(html, plan.get("previous", []))
+            # The entertainment disclaimer is required every day, so it is not treated as copied phrasing.
+            repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if "ψυχαγωγ" not in item]
+            fails += checks.zodia_structure(html) + repeated
         if kind in ("health", "nutrition"):
             fails += checks.health_claims(html, self.blocked)
             if kind == "health" and article.subcategory not in config.HEALTH_SUBCATEGORIES:
@@ -281,7 +283,8 @@ class Runner:
                 self.log("\n".join(render.paragraphs(html, 2)))
                 util.write_json(config.DRY_RUN_DIR / f"{kind}-{result['slug']}.json", payload)
             else:
-                unsplash.remember(photo_id, None if photo_id else image["url"])
+                if photo_id or image.get("url"):
+                    unsplash.remember(photo_id, None if photo_id else image["url"])
                 topics = util.read_json(config.STATE_DIR / "topics.json", {"topics": []}) or {"topics": []}
                 topics["topics"] = [t for t in topics["topics"] if t["date"] >= (self.day - timedelta(days=90)).isoformat()]
                 topics["topics"].append({"date": self.day.isoformat(), "type": kind, "topic": plan["topic"], "title": article.title, "slug": result["slug"]})
