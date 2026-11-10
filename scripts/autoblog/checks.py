@@ -35,7 +35,11 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
     if key and key not in util.fold(first):
         fails.append("το focus keyword λείπει από τις πρώτες 100 λέξεις")
     everything = " ".join([article.title, article.meta_description, article.excerpt, util.html_text(html)])
-    if "\u2014" in everything:
+    dashes = everything.count("\u2014")
+    if kind in ("health", "nutrition", "news", "lifestyle", "gossip"):
+        if dashes > 2:
+            fails.append(f"em dash (—) {dashes} φορές, μέγιστο 2")
+    elif dashes:
         fails.append("υπάρχει em dash (—)")
     if PLACEHOLDERS.search(everything):
         fails.append("υπάρχει placeholder ([, ], TODO, lorem, XX)")
@@ -83,8 +87,61 @@ def health_claims(html: str, blocked: dict) -> list[str]:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             fails.append(f"μη επιτρεπτή ιατρική διατύπωση: {match.group(0)}")
-    if not any("γιατρ" in util.fold(h) for h in render.h2_titles(html)):
-        fails.append("λείπει ενότητα «Πότε να μιλήσετε με γιατρό»")
+    return fails
+
+
+CONCLUSION_TITLES = ("Το Τελικό Συμπέρασμα", "Η Επόμενη Κίνησή σου", "Τι Κάνεις Τώρα")
+OPENERS = ("Σε έναν κόσμο", "Στη σύγχρονη εποχή", "Καλώς ήρθατε", "Είναι γνωστό ότι", "Όλοι γνωρίζουμε")
+EDITORIAL_CLICHES = (
+    "αναμφίβολα", "εντυπωσιακός", "εντυπωσιακή", "εντυπωσιακό",
+    "αξιοσημείωτος", "αξιοσημείωτη", "αξιοσημείωτο", "ουσιαστικός", "ουσιαστική", "ουσιαστικό",
+)
+
+
+def editorial_structure(article, html: str) -> list[str]:
+    """The house template for every article except eortologio and zodia."""
+    from bs4 import BeautifulSoup
+
+    fails: list[str] = []
+    soup = BeautifulSoup(html, "html.parser")
+    text = util.html_text(html)
+    folded = util.fold(text)
+    padded = f" {folded} "
+    start = util.fold(" ".join(text.split()[:8]))
+    if any(start.startswith(util.fold(opener)) for opener in OPENERS):
+        fails.append("απαγορευμένη εκκίνηση εισαγωγής")
+    bullets = soup.find("ul")
+    if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
+        fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
+    if soup.find("ol") is None:
+        fails.append("λείπει αριθμημένη λίστα ή πρακτικό πλάνο")
+    h2s = render.h2_titles(html)
+    if not 5 <= len(h2s) <= 8:
+        fails.append(f"{len(h2s)} ενότητες H2, ζητούνται 4-6 στο σώμα συν το κλείσιμο")
+    titles = [util.fold(h) for h in h2s]
+    endings = [util.fold(title) for title in CONCLUSION_TITLES]
+    if not any(title == wanted or title.startswith(wanted) for title in titles for wanted in endings):
+        fails.append("το κλείσιμο πρέπει να είναι «Το Τελικό Συμπέρασμα», «Η Επόμενη Κίνησή σου» ή «Τι Κάνεις Τώρα»")
+    if "συμπερασμα" in titles:
+        fails.append("μην τιτλοφορείς το κλείσιμο σκέτο «Συμπέρασμα»")
+    if len(soup.find_all("h3")) < 5:
+        fails.append("οι συχνές ερωτήσεις χρειάζονται 5 ερωτήσεις σε H3")
+    if util.fold("αποποίηση ευθύνης") not in folded or util.fold("δεν αποτελεί ιατρική συμβουλή") not in folded:
+        fails.append("λείπει η αποποίηση ευθύνης στο τέλος")
+    key = util.fold(article.focus_keyword).strip()
+    if key and sum(key in title for title in titles) < 2:
+        fails.append("η λέξη-κλειδί λείπει από δύο H2")
+    first_h2 = soup.find("h2")
+    if first_h2 is not None:
+        before = []
+        for sib in first_h2.previous_siblings:
+            before.append(sib.get_text(" ", strip=True) if hasattr(sib, "get_text") else str(sib))
+        if len(" ".join(reversed(before)).split()) > 220:
+            fails.append("το πρώτο H2 είναι μετά τις πρώτες 200 λέξεις")
+    for phrase in EDITORIAL_CLICHES:
+        if f" {util.fold(phrase)} " in padded:
+            fails.append(f"κλισέ λέξη: {phrase}")
+            break
     return fails
 
 

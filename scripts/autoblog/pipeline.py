@@ -13,7 +13,7 @@ from .budget import Budget, BudgetExceeded
 from .content import ContentIndex
 from .gemini import Article, Gemini, GenerationError, Verdict
 from .openai_llm import OpenAIWriter
-from .prompts import STYLE, TYPE_RULES, VALIDATOR
+from .prompts import EDITORIAL, EDITORIAL_KINDS, STYLE, TYPE_RULES, VALIDATOR
 
 VALIDATED = {"news", "lifestyle", "gossip", "health", "nutrition"}
 NEWS = {"news", "lifestyle", "gossip"}
@@ -71,15 +71,18 @@ class Runner:
             plan["previous"] = [self.ctx.body_text(i["slug"]) for i in self.ctx.recent({407}, 7, self.day) if i["slug"] != post["slug"]]
             plan["context"] = f"Ημέρα: {today}."
         else:
-            plan["context"] = (f"Θέμα: {post['title']}.\nΓράψε από την αρχή νέο, πρωτότυπο άρθρο για αυτό το θέμα, με δική σου δομή.\n"
-                               f"Σημερινή ημερομηνία: {util.greek_date(util.now_athens().date())}.")
-        plan["context"] += (
-            f"\n\nΞαναγράφεις από την αρχή το άρθρο «{post['title']}». "
-            "Κράτησε αυτόν τον τίτλο αυτούσιο, ακόμη κι αν άλλος κανόνας λέει να μην έχει έτος. "
-            "Αν ο τίτλος έχει em dash (—), αντικατάστησε μόνο αυτή με άνω και κάτω τελεία. "
-            "Απλά ελληνικά, κοντές προτάσεις, πρακτικό περιοδικό. Καμία ποιητική μεταφορά και κανένα δυσνόητο λογοπαίγνιο. "
-            "Το focus_keyword πρέπει να υπάρχει αυτούσιο στον τίτλο."
-        )
+            plan["context"] = (
+                f"Θέμα: {post['title']}.\n"
+                "Ξαναγράφεις από την αρχή νέο άρθρο για το ίδιο θέμα. Νέος τίτλος, με τους κανόνες της προτροπής.\n"
+                f"Σημερινή ημερομηνία: {util.greek_date(util.now_athens().date())}."
+            )
+        if kind in ("eortologio", "zodia"):
+            plan["context"] += (
+                f"\n\nΞαναγράφεις από την αρχή το άρθρο «{post['title']}». "
+                "Κράτησε αυτόν τον τίτλο αυτούσιο, ακόμη κι αν άλλος κανόνας λέει να μην έχει έτος. "
+                "Αν ο τίτλος έχει em dash (—), αντικατάστησε μόνο αυτή με άνω και κάτω τελεία. "
+                "Το focus_keyword πρέπει να υπάρχει αυτούσιο στον τίτλο."
+            )
         return plan
 
     def plan(self, kind: str, slot: int) -> dict:
@@ -180,9 +183,11 @@ class Runner:
     # ---------- generation ----------
     def check(self, kind: str, plan: dict, article: Article) -> tuple[list[str], str, str]:
         slug = plan["slug"] or util.node_slugify(article.title)
-        html = render.markdown_to_html(article.body_markdown)
+        html = render.article_html(article.body_markdown)
         html, links = render.fix_links(html, kind=kind, known_slugs=self.ctx.slugs, self_slug=slug)
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
+        if kind in EDITORIAL_KINDS:
+            fails += checks.editorial_structure(article, html)
         if links["internal"] < 1:
             fails.append("χρειάζεται τουλάχιστον ένας έγκυρος εσωτερικός σύνδεσμος από τη λίστα")
         if kind == "eortologio":
@@ -202,11 +207,18 @@ class Runner:
 
     def write(self, kind: str, plan: dict) -> tuple[Article, str, str]:
         cands = linking.candidates(self.ctx, plan["category"], plan["topic"], exclude=plan["slug"])
-        prompt = f"{TYPE_RULES[kind]}\n\n{plan['context']}\n\nΥποψήφιοι εσωτερικοί σύνδεσμοι:\n" + "\n".join(f"- {c['title']}: {config.SITE}/{c['slug']}/" for c in cands)
+        links = "\n".join(f"- {c['title']}: {config.SITE}/{c['slug']}/" for c in cands)
+        link_note = (
+            "\n\nΒάλε 2 εσωτερικούς συνδέσμους <a href> μόνο προς διευθύνσεις από την παρακάτω λίστα, μέσα σε προτάσεις. Μην αλλάξεις τη δομή."
+            if kind in EDITORIAL_KINDS
+            else ""
+        )
+        prompt = f"{TYPE_RULES[kind]}\n\n{plan['context']}{link_note}\n\nΥποψήφιοι εσωτερικοί σύνδεσμοι:\n{links}"
+        system = EDITORIAL if kind in EDITORIAL_KINDS else STYLE
         feedback: list[str] = []
         for _ in range(config.VALIDATION_RETRIES + 1):
             text = prompt + ("\n\nΗ προηγούμενη εκδοχή απορρίφθηκε για: " + "; ".join(feedback) + ". Διόρθωσέ τα." if feedback else "")
-            article = self.gemini.generate(STYLE, text, Article)
+            article = self.gemini.generate(system, text, Article)
             feedback, html, slug = self.check(kind, plan, article)
             if not feedback:
                 return article, html, slug
