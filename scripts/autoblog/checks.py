@@ -47,7 +47,11 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
     clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT)
     if clash:
         fails.append(f"ο τίτλος μοιάζει με υπάρχοντα: {clash}")
-    if " ".join(util.words(article.meta_description)) in ctx.metas:
+    meta_key = " ".join(util.words(article.meta_description))
+    own_meta = ""
+    if self_slug:
+        own_meta = " ".join(util.words((ctx.posts.get(self_slug) or {}).get("meta_description") or ""))
+    if meta_key in ctx.metas and meta_key != own_meta:
         fails.append("η meta description υπάρχει ήδη")
     return fails
 

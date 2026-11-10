@@ -1,0 +1,67 @@
+name: rewrite-nov10
+
+# One shot: rewrite 10 November 2026 articles with gpt-6.1-sol, then delete this workflow.
+on:
+  push:
+    branches: [cursor/rewrite-nov10-gpt-6a5a]
+
+permissions:
+  contents: write
+
+jobs:
+  rewrite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      AI_PROVIDER: openai
+      OPENAI_MODEL: gpt-6.1-sol
+      OPENAI_FALLBACK_MODEL: gpt-6.1-terra
+      OPENAI_REASONING_EFFORT: low
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AUTO_BLOG_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pip install -r scripts/requirements.txt
+      - name: Rewrite today's articles
+        id: rewrite
+        run: |
+          set -uo pipefail
+          failed=0
+          slugs="
+          kryologima-kai-ypnos-ton-noemvrio-pos-na-xekoyrasteite
+          ypnos-kai-kardia-ton-noemvrio-ti-na-prosexete-to-vrady
+          zodia-simera-triti-10-noemvrioy-2026
+          antiliako-ton-cheimona-pote-echei-noima
+          poioi-giortazoyn-simera-triti-10-noemvrioy-2026
+          "
+          for slug in $slugs; do
+            python scripts/generate_articles.py --rewrite "$slug" --no-commit || failed=1
+          done
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Commit rewritten articles and remove this workflow
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          if [ "${{ steps.rewrite.outputs.failed }}" = "0" ]; then
+            git rm -f .github/workflows/rewrite-nov10.yml
+          fi
+          git add content scripts/state
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit "${{ steps.rewrite.outputs.failed }}"
+          fi
+          git commit -m "Ξαναγραφή των άρθρων της 10ης Νοεμβρίου με GPT."
+          git push origin HEAD
+          exit "${{ steps.rewrite.outputs.failed }}"
