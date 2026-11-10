@@ -21,6 +21,15 @@ on:
         description: "Generate and validate only (no commit, no push)"
         type: boolean
         default: true
+      provider:
+        description: "openai or gemini. default keeps the AI_PROVIDER variable."
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - gemini
+          - openai
       date:
         description: "Dry-run only: article date YYYY-MM-DD (default: today, Athens)"
         required: false
@@ -52,7 +61,7 @@ jobs:
       GEMINI_FALLBACK_MODEL: ${{ vars.GEMINI_FALLBACK_MODEL || 'gemini-3.7-flash' }}
       GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+      AI_PROVIDER: ${{ github.event_name == 'workflow_dispatch' && inputs.provider != 'default' && inputs.provider || vars.AI_PROVIDER }}
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-6.1-sol' }}
       OPENAI_FALLBACK_MODEL: ${{ vars.OPENAI_FALLBACK_MODEL || 'gpt-6.1-terra' }}
       OPENAI_REASONING_EFFORT: ${{ vars.OPENAI_REASONING_EFFORT }}
