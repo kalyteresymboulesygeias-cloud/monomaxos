@@ -95,6 +95,17 @@ export function displayImageSrc(src: string, maxWidth: number): string {
   } catch {
     return upgraded;
   }
+  const host = url.hostname.replace(/^www\./, "");
+  if (
+    (host === "monomaxos.gr" || host === "media.monomaxos.gr") &&
+    url.pathname.startsWith("/editorial/") &&
+    url.pathname.endsWith(".webp") &&
+    !url.pathname.endsWith("-w256.webp") &&
+    width <= 320
+  ) {
+    url.pathname = url.pathname.replace(/\.webp$/, "-w256.webp");
+    return url.href;
+  }
   if (!STOCK_HOSTS.includes(url.hostname)) return upgraded;
   const current = Number(url.searchParams.get("w"));
   url.searchParams.set("w", String(Number.isFinite(current) && current > 0 ? Math.min(current, width) : width));
