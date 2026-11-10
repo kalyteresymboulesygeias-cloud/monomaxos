@@ -37,7 +37,7 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
-          for slug in zodia-simera-triti-10-noemvrioy-2026 poioi-giortazoyn-simera-triti-10-noemvrioy-2026; do
+          for slug in poioi-giortazoyn-simera-triti-10-noemvrioy-2026; do
             python scripts/generate_articles.py --rewrite "$slug" --no-commit || failed=1
           done
           echo "failed=$failed" >> "$GITHUB_OUTPUT"
