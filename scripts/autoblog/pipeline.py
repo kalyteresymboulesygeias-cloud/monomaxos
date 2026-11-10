@@ -73,6 +73,13 @@ class Runner:
         else:
             plan["context"] = (f"Θέμα: {post['title']}.\nΓράψε από την αρχή νέο, πρωτότυπο άρθρο για αυτό το θέμα, με δική σου δομή.\n"
                                f"Σημερινή ημερομηνία: {util.greek_date(util.now_athens().date())}.")
+        plan["context"] += (
+            f"\n\nΞαναγράφεις από την αρχή το άρθρο «{post['title']}». "
+            "Κράτησε αυτόν τον τίτλο αυτούσιο, ακόμη κι αν άλλος κανόνας λέει να μην έχει έτος. "
+            "Αν ο τίτλος έχει em dash (—), αντικατάστησε μόνο αυτή με άνω και κάτω τελεία. "
+            "Απλά ελληνικά, κοντές προτάσεις, πρακτικό περιοδικό. Καμία ποιητική μεταφορά και κανένα δυσνόητο λογοπαίγνιο. "
+            "Το focus_keyword πρέπει να υπάρχει αυτούσιο στον τίτλο."
+        )
         return plan
 
     def plan(self, kind: str, slot: int) -> dict:
@@ -181,7 +188,9 @@ class Runner:
         if kind == "eortologio":
             fails += checks.eortologio_names(html, plan["names"])
         if kind == "zodia":
-            fails += checks.zodia_structure(html) + checks.repetition(html, plan.get("previous", []))
+            # The entertainment disclaimer is required every day, so it is not treated as copied phrasing.
+            repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if "ψυχαγωγ" not in item]
+            fails += checks.zodia_structure(html) + repeated
         if kind in ("health", "nutrition"):
             fails += checks.health_claims(html, self.blocked)
             if kind == "health" and article.subcategory not in config.HEALTH_SUBCATEGORIES:
@@ -243,10 +252,16 @@ class Runner:
                 raise GenerationError("; ".join(reasons))
             category = config.HEALTH_SUBCATEGORIES.get(article.subcategory or "", plan["category"]) if kind == "health" and not self.rewrite else plan["category"]
             alt = (article.image_alts or [article.title])[0]
-            image, photo_id, info = unsplash.pick_image(article.image_queries, alt, category, self.budget, dry_run=self.dry, session=self.http)
+            if self.rewrite:
+                existing = (self.ctx.posts.get(plan["slug"]) or {}).get("featured_image") or {}
+                if not existing.get("url"):
+                    raise GenerationError("το άρθρο δεν έχει εικόνα")
+                image, photo_id, info = {}, None, {"kept": existing["url"]}
+            else:
+                image, photo_id, info = unsplash.pick_image(article.image_queries, alt, category, self.budget, dry_run=self.dry, session=self.http)
+                if not image.get("url"):
+                    raise GenerationError("δεν βρέθηκε εικόνα")
             record["image"] = info
-            if not image.get("url"):
-                raise GenerationError("δεν βρέθηκε εικόνα")
             payload = {
                 "original": True,
                 "title": article.title,
@@ -255,10 +270,11 @@ class Runner:
                 "excerpt": article.excerpt,
                 "category_id": category,
                 "meta_description": article.meta_description,
-                "featured_image": image,
                 "date": plan["date"],
                 "disclaimer": config.DISCLAIMER_BY_TYPE[kind],
             }
+            if image.get("url"):
+                payload["featured_image"] = image
             result = self.publish(plan, payload)
             record.update(status="PASS", slug=result["slug"], updated=plan["update"])
             if self.dry:
@@ -267,7 +283,8 @@ class Runner:
                 self.log("\n".join(render.paragraphs(html, 2)))
                 util.write_json(config.DRY_RUN_DIR / f"{kind}-{result['slug']}.json", payload)
             else:
-                unsplash.remember(photo_id, None if photo_id else image["url"])
+                if photo_id or image.get("url"):
+                    unsplash.remember(photo_id, None if photo_id else image["url"])
                 topics = util.read_json(config.STATE_DIR / "topics.json", {"topics": []}) or {"topics": []}
                 topics["topics"] = [t for t in topics["topics"] if t["date"] >= (self.day - timedelta(days=90)).isoformat()]
                 topics["topics"].append({"date": self.day.isoformat(), "type": kind, "topic": plan["topic"], "title": article.title, "slug": result["slug"]})
