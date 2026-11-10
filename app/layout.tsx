@@ -57,12 +57,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Μετάβαση στο περιεχόμενο
         </a>
-        <div className="hidden bg-pine text-sm text-paper sm:block">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-2.5">
-            <p className="font-medium">Περιοδικό υγείας και ευεξίας</p>
-            <p className="text-paper/85">Υγεία · Ομορφιά · Διατροφή · Ψυχική υγεία</p>
-          </div>
-        </div>
         <SiteHeader categories={nav} />
         {adSlotVisible(LEADERBOARD) ? (
           <div className="mx-auto max-w-6xl px-4 pt-4">

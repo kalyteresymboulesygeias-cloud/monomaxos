@@ -31,13 +31,13 @@ export default function MobileNav({ categories }: { categories: NavCategory[] })
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm text-ink"
+        className="inline-flex items-center gap-2 rounded-full border border-paper/40 px-3 py-1.5 text-sm text-paper"
       >
         <span className="sr-only">Άνοιγμα μενού</span>
         <span aria-hidden className="flex flex-col gap-1">
-          <span className="block h-px w-4 bg-ink" />
-          <span className="block h-px w-4 bg-ink" />
-          <span className="block h-px w-3 bg-ink" />
+          <span className="block h-px w-4 bg-paper" />
+          <span className="block h-px w-4 bg-paper" />
+          <span className="block h-px w-3 bg-paper" />
         </span>
         Μενού
       </button>
