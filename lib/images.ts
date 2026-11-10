@@ -100,11 +100,13 @@ export function displayImageSrc(src: string, maxWidth: number): string {
     (host === "monomaxos.gr" || host === "media.monomaxos.gr") &&
     url.pathname.startsWith("/editorial/") &&
     url.pathname.endsWith(".webp") &&
-    !url.pathname.endsWith("-w256.webp") &&
-    width <= 320
+    !/-w\d+\.webp$/.test(url.pathname)
   ) {
-    url.pathname = url.pathname.replace(/\.webp$/, "-w256.webp");
-    return url.href;
+    const variant = width <= 320 ? 256 : width <= 1000 ? 800 : 0;
+    if (variant) {
+      url.pathname = url.pathname.replace(/\.webp$/, `-w${variant}.webp`);
+      return url.href;
+    }
   }
   if (!STOCK_HOSTS.includes(url.hostname)) return upgraded;
   const current = Number(url.searchParams.get("w"));
