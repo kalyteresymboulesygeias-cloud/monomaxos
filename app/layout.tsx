@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
 import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import AdSlot from "@/components/AdSlot";
@@ -18,7 +17,7 @@ const sans = Source_Sans_3({
 
 const serif = Source_Serif_4({
   subsets: ["latin", "greek"],
-  style: ["normal", "italic"],
+  weight: "400",
   variable: "--font-serif-src",
   display: "swap",
 });
@@ -37,12 +36,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const nav = getNavCategories();
   return (
     <html lang="el" className={`${sans.variable} ${serif.variable}`}>
-      <GoogleTagManager gtmId="GTM-NSH3BN3V" />
       <body className="bg-paper text-ink antialiased">
+        <Script id="gtm" strategy="lazyOnload">{`
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+          var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
+          j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-NSH3BN3V');
+        `}</Script>
         {ADSENSE ? (
           <Script
             async
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             crossOrigin="anonymous"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE}`}
           />
