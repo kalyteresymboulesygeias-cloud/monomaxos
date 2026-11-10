@@ -184,7 +184,15 @@ class Runner:
         html = render.article_html(article.body_markdown)
         html, links = render.fix_links(html, kind=kind, known_slugs=self.ctx.slugs, self_slug=slug)
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
-        if kind in EDITORIAL_KINDS:
+        if kind == "lifestyle":
+            fails += checks.editorial_structure(
+                article, html,
+                disclaimer=("αποποίηση ευθύνης", "δημόσια γνωστές πληροφορίες"),
+                extra_cliches=("μεταμορφωτικός", "μεταμορφωτική", "μεταμορφωτικό", "σοκαριστικό", "σοκαριστικός", "σοκαριστική"),
+                h2_range=(4, 6),
+                require_closing=False,
+            )
+        elif kind in EDITORIAL_KINDS:
             fails += checks.editorial_structure(article, html)
         elif kind == "zodia":
             fails += checks.editorial_structure(
