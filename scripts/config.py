@@ -37,18 +37,18 @@ DISCLAIMER_BY_TYPE = {
     "nutrition": "medical",
     "zodia": "entertainment",
     "eortologio": "none",
-    "news": "none",
-    "lifestyle": "none",
-    "gossip": "none",
+    "news": "medical",
+    "lifestyle": "medical",
+    "gossip": "medical",
 }
 WORD_RANGE = {
     "eortologio": (400, 700),
     "zodia": (800, 1200),
-    "health": (800, 1200),
-    "nutrition": (800, 1200),
-    "news": (800, 1200),
-    "lifestyle": (800, 1200),
-    "gossip": (800, 1200),
+    "health": (1000, 1500),
+    "nutrition": (1000, 1500),
+    "news": (1000, 1500),
+    "lifestyle": (1000, 1500),
+    "gossip": (1000, 1500),
 }
 # Athens wall-clock publish time; extra articles of the same type go +2h each.
 PUBLISH_TIME = {

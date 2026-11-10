@@ -11,14 +11,29 @@ import config
 
 from . import util
 
-ALLOWED_TAGS = {"p", "h2", "h3", "ul", "ol", "li", "strong", "em", "a", "figure", "img", "figcaption", "blockquote"}
+ALLOWED_TAGS = {
+    "p", "h2", "h3", "ul", "ol", "li", "strong", "em", "a", "figure", "img", "figcaption", "blockquote",
+    "table", "thead", "tbody", "tr", "th", "td",
+}
 ALLOWED_ATTRS = {"a": {"href"}, "img": {"src", "alt", "width", "height"}}
 NEWS_TYPES = {"news", "lifestyle", "gossip"}
 
 
+def _clean(raw: str) -> str:
+    return nh3.clean(raw, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, link_rel=None, url_schemes={"https", "http", "mailto"}).strip()
+
+
 def markdown_to_html(text: str) -> str:
     raw = md.markdown(text or "", extensions=["extra"], output_format="html")
-    return nh3.clean(raw, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, link_rel=None, url_schemes={"https", "http", "mailto"}).strip()
+    return _clean(raw)
+
+
+def article_html(text: str) -> str:
+    """Editorial articles are HTML. Eortologio and zodia stay Markdown."""
+    raw = (text or "").strip()
+    if raw.startswith("<") or "<h2" in raw[:400].lower() or "<p" in raw[:200].lower():
+        return _clean(raw)
+    return markdown_to_html(raw)
 
 
 def _internal_slug(href: str) -> str | None:
