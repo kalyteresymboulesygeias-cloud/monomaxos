@@ -13,7 +13,7 @@ from .budget import Budget, BudgetExceeded
 from .content import ContentIndex
 from .gemini import Article, Gemini, GenerationError, Verdict
 from .openai_llm import OpenAIWriter
-from .prompts import EDITORIAL, EDITORIAL_KINDS, STYLE, TYPE_RULES, VALIDATOR
+from .prompts import EDITORIAL_KINDS, TYPE_RULES, VALIDATOR, system_prompt
 
 VALIDATED = {"news", "lifestyle", "gossip", "health", "nutrition"}
 NEWS = {"news", "lifestyle", "gossip"}
@@ -188,14 +188,25 @@ class Runner:
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
         if kind in EDITORIAL_KINDS:
             fails += checks.editorial_structure(article, html)
+        elif kind == "zodia":
+            fails += checks.editorial_structure(
+                article, html,
+                disclaimer=("αποποίηση ευθύνης", "δεν αποτελεί επιστήμη"),
+                extra_cliches=("μαγικό", "μαγική", "μαγικός", "μοιραίο", "μοιραία", "μοιραίος"),
+            )
+        elif kind == "eortologio":
+            fails += checks.editorial_structure(
+                article, html,
+                disclaimer=("αποποίηση ευθύνης", "δεν αποτελούν θεολογική ερμηνεία"),
+            )
         if links["internal"] < 1:
             fails.append("χρειάζεται τουλάχιστον ένας έγκυρος εσωτερικός σύνδεσμος από τη λίστα")
         if kind == "eortologio":
             fails += checks.eortologio_names(html, plan["names"])
         if kind == "zodia":
-            # The entertainment disclaimer is required every day, so it is not treated as copied phrasing.
-            repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if "ψυχαγωγ" not in item]
-            fails += checks.zodia_structure(html) + repeated
+            # The fixed entertainment disclaimer is not treated as copied phrasing.
+            repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if not any(w in item for w in ("ψυχαγωγ", "αστρολογ", "αποποι"))]
+            fails += checks.zodia_signs(html) + repeated
         if kind in ("health", "nutrition"):
             fails += checks.health_claims(html, self.blocked)
             if kind == "health" and article.subcategory not in config.HEALTH_SUBCATEGORIES:
@@ -210,11 +221,9 @@ class Runner:
         links = "\n".join(f"- {c['title']}: {config.SITE}/{c['slug']}/" for c in cands)
         link_note = (
             "\n\nΒάλε 2 εσωτερικούς συνδέσμους <a href> μόνο προς διευθύνσεις από την παρακάτω λίστα, μέσα σε προτάσεις. Μην αλλάξεις τη δομή."
-            if kind in EDITORIAL_KINDS
-            else ""
         )
         prompt = f"{TYPE_RULES[kind]}\n\n{plan['context']}{link_note}\n\nΥποψήφιοι εσωτερικοί σύνδεσμοι:\n{links}"
-        system = EDITORIAL if kind in EDITORIAL_KINDS else STYLE
+        system = system_prompt(kind)
         feedback: list[str] = []
         for _ in range(config.VALIDATION_RETRIES + 1):
             text = prompt + ("\n\nΗ προηγούμενη εκδοχή απορρίφθηκε για: " + "; ".join(feedback) + ". Διόρθωσέ τα." if feedback else "")

@@ -36,14 +36,14 @@ DISCLAIMER_BY_TYPE = {
     "health": "medical",
     "nutrition": "medical",
     "zodia": "entertainment",
-    "eortologio": "none",
+    "eortologio": "tradition",
     "news": "medical",
     "lifestyle": "medical",
     "gossip": "medical",
 }
 WORD_RANGE = {
-    "eortologio": (400, 700),
-    "zodia": (800, 1200),
+    "eortologio": (1000, 1500),
+    "zodia": (1000, 1500),
     "health": (1000, 1500),
     "nutrition": (1000, 1500),
     "news": (1000, 1500),
