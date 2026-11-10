@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return eortologioRedirects();
   },
-  // Some Greek mobile networks refuse *.r2.dev, so uploads are proxied same-origin.
+  // Old /media links still resolve. New pages point straight at media.monomaxos.gr.
   async rewrites() {
     return [{ source: `${MEDIA_PROXY}/:path*`, destination: `${R2_ORIGIN}/wp-content/uploads/:path*` }];
   },
