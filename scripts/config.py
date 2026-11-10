@@ -38,7 +38,7 @@ DISCLAIMER_BY_TYPE = {
     "zodia": "entertainment",
     "eortologio": "tradition",
     "news": "medical",
-    "lifestyle": "medical",
+    "lifestyle": "lifestyle",
     "gossip": "medical",
 }
 WORD_RANGE = {

@@ -47,11 +47,14 @@ const ENTERTAINMENT_DISCLAIMER_TEXT =
   "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ψυχαγωγικό και ενημερωτικό χαρακτήρα. Η αστρολογία δεν αποτελεί επιστήμη και δεν πρέπει να χρησιμοποιείται ως βάση για σημαντικές αποφάσεις. Οι πληροφορίες προέρχονται από την αστρολογική παράδοση και τις δημοφιλείς ερμηνείες.";
 const TRADITION_DISCLAIMER_TEXT =
   "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ενημερωτικό και πολιτιστικό χαρακτήρα. Οι πληροφορίες βασίζονται στην ελληνική εκκλησιαστική παράδοση και το επίσημο εορτολόγιο. Δεν αποτελούν θεολογική ερμηνεία ή επίσημη θέση της Εκκλησίας.";
+const LIFESTYLE_DISCLAIMER_TEXT =
+  "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ενημερωτικό και προτάσεων χαρακτήρα. Δεν αποτελεί επαγγελματική συμβουλή. Οι αναφορές σε καλλιτέχνες βασίζονται σε δημόσια γνωστές πληροφορίες και έχουν ψυχαγωγικό χαρακτήρα.";
 const DISCLAIMER = `<p><em>${MEDICAL_DISCLAIMER_TEXT}</em></p>`;
 const DISCLAIMERS = {
   medical: { html: DISCLAIMER, present: /αποποίηση ευθύνης|δεν αντικαθιστά την ιατρική συμβουλή/i },
   entertainment: { html: `<p><em>${ENTERTAINMENT_DISCLAIMER_TEXT}</em></p>`, present: /ψυχαγωγικό και ενημερωτικό χαρακτήρα|ψυχαγωγικό χαρακτήρα\. Δεν αποτελούν πρόβλεψη/i },
   tradition: { html: `<p><em>${TRADITION_DISCLAIMER_TEXT}</em></p>`, present: /ενημερωτικό και πολιτιστικό χαρακτήρα/i },
+  lifestyle: { html: `<p><em>${LIFESTYLE_DISCLAIMER_TEXT}</em></p>`, present: /προτάσεων χαρακτήρα/i },
   none: null,
 };
 const GREEK = {
@@ -252,7 +255,7 @@ function ensureHtml(value) {
 
 function resolveDisclaimer(value) {
   const kind = value == null || value === "" ? "medical" : String(value);
-  if (!Object.hasOwn(DISCLAIMERS, kind)) fail('disclaimer must be "medical", "entertainment", "tradition" or "none"');
+  if (!Object.hasOwn(DISCLAIMERS, kind)) fail('disclaimer must be "medical", "entertainment", "tradition", "lifestyle" or "none"');
   return kind;
 }
 

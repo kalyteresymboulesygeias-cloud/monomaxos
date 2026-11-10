@@ -101,6 +101,8 @@ def editorial_structure(
     *,
     disclaimer: tuple[str, ...] = ("αποποίηση ευθύνης", "δεν αποτελεί ιατρική συμβουλή"),
     extra_cliches: tuple[str, ...] = (),
+    h2_range: tuple[int, int] = (5, 8),
+    require_closing: bool = True,
 ) -> list[str]:
     """House template: takeaways, sections, steps, five questions, a real closing title, disclaimer."""
     from bs4 import BeautifulSoup
@@ -119,16 +121,18 @@ def editorial_structure(
     if soup.find("ol") is None:
         fails.append("λείπει αριθμημένη λίστα ή πρακτικό πλάνο")
     h2s = render.h2_titles(html)
-    if not 5 <= len(h2s) <= 8:
-        fails.append(f"{len(h2s)} ενότητες H2, ζητούνται 4-6 στο σώμα συν το κλείσιμο")
+    low_h2, high_h2 = h2_range
+    if not low_h2 <= len(h2s) <= high_h2:
+        fails.append(f"{len(h2s)} ενότητες H2, ζητούνται {low_h2}-{high_h2}")
     titles = [util.fold(h) for h in h2s]
-    endings = [util.fold(title) for title in CONCLUSION_TITLES]
-    if not any(title == wanted or title.startswith(wanted) for title in titles for wanted in endings):
-        fails.append("το κλείσιμο πρέπει να είναι «Το Τελικό Συμπέρασμα», «Η Επόμενη Κίνησή σου» ή «Τι Κάνεις Τώρα»")
-    if "συμπερασμα" in titles:
-        fails.append("μην τιτλοφορείς το κλείσιμο σκέτο «Συμπέρασμα»")
-    if len(soup.find_all("h3")) < 5:
-        fails.append("οι συχνές ερωτήσεις χρειάζονται 5 ερωτήσεις σε H3")
+    if require_closing:
+        endings = [util.fold(title) for title in CONCLUSION_TITLES]
+        if not any(title == wanted or title.startswith(wanted) for title in titles for wanted in endings):
+            fails.append("το κλείσιμο πρέπει να είναι «Το Τελικό Συμπέρασμα», «Η Επόμενη Κίνησή σου» ή «Τι Κάνεις Τώρα»")
+        if "συμπερασμα" in titles:
+            fails.append("μην τιτλοφορείς το κλείσιμο σκέτο «Συμπέρασμα»")
+        if len(soup.find_all("h3")) < 5:
+            fails.append("οι συχνές ερωτήσεις χρειάζονται 5 ερωτήσεις σε H3")
     if any(util.fold(mark) not in folded for mark in disclaimer):
         fails.append("λείπει η αποποίηση ευθύνης στο τέλος")
     key = util.fold(article.focus_keyword).strip()
