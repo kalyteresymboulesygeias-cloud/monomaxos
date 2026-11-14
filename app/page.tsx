@@ -5,7 +5,7 @@ import SectionRail from "@/components/SectionRail";
 import { displayName, stripHtml } from "@/components/editorial";
 import { getCategories, getIndex, getNavCategories, getPost, getPostsByCategory } from "@/lib/content";
 
-export const PER_PAGE = 24;
+const PER_PAGE = 24;
 
 export default function Home() {
   const all = getIndex();

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/editorial-thumbs.mjs && next build",
+    "build": "node scripts/editorial-thumbs.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "publish": "node scripts/publish-post.mjs",
