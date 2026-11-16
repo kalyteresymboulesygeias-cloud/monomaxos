@@ -20,8 +20,9 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
     count = render.word_count(html)
     if not low <= count <= high:
         fails.append(f"μήκος {count} λέξεις, ζητούνται {low}-{high}")
-    if len(render.h2_titles(html)) < 3:
-        fails.append("λιγότερα από 3 H2")
+    min_h2 = config.MIN_H2.get(kind, 3)
+    if len(render.h2_titles(html)) < min_h2:
+        fails.append(f"λιγότερα από {min_h2} H2")
     if "<h1" in html.lower() or re.search(r"^# ", article.body_markdown, re.M):
         fails.append("υπάρχει H1")
     if not 25 <= len(article.title) <= 60:
@@ -155,6 +156,37 @@ def editorial_structure(
 def source_overlap(html: str, source_texts: list[str]) -> list[str]:
     shared = util.shared_phrases(util.html_text(html), source_texts, 8)
     return [f"κοινή ακολουθία 8+ λέξεων με πηγή: «{s}»" for s in shared]
+
+
+def eortologio_structure(article, html: str) -> list[str]:
+    """Intro, takeaways, the generated names block, one saint section, disclaimer last."""
+    from bs4 import BeautifulSoup
+
+    fails: list[str] = []
+    soup = BeautifulSoup(html, "html.parser")
+    text = util.html_text(html)
+    start = util.fold(" ".join(text.split()[:8]))
+    if any(start.startswith(util.fold(opener)) for opener in OPENERS):
+        fails.append("απαγορευμένη εκκίνηση εισαγωγής")
+    bullets = soup.find("ul")
+    if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
+        fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
+    if len(soup.find_all("ul")) > 1 or soup.find(["ol", "table"]) is not None:
+        fails.append("μόνο το πλαίσιο «Τι Πρέπει να Θυμάσαι» ως λίστα, χωρίς πίνακα ή αριθμημένη λίστα")
+    h2s = render.h2_titles(html)
+    if not 2 <= len(h2s) <= 3:
+        fails.append(f"{len(h2s)} ενότητες H2, ζητείται μία ενότητα για τον άγιο")
+    if len(soup.find_all("h3")) > 1:
+        fails.append("χωρίς υποενότητες ή συχνές ερωτήσεις σε H3")
+    last = soup.find_all("p")[-1:]
+    if not last or not all(util.fold(m) in util.fold(last[0].get_text(" ", strip=True)) for m in ("αποποίηση ευθύνης", "δεν αποτελούν θεολογική ερμηνεία")):
+        fails.append("το άρθρο πρέπει να τελειώνει με την αποποίηση ευθύνης")
+    padded = f" {util.fold(text)} "
+    for phrase in EDITORIAL_CLICHES:
+        if f" {util.fold(phrase)} " in padded:
+            fails.append(f"κλισέ λέξη: {phrase}")
+            break
+    return fails
 
 
 NAME_WORDS = {"και", "σημερα", "οι", "η", "ο", "αγιοσ", "αγια", "αγιου", "αγιασ", "αγιοι", "οσιοσ", "οσια"}

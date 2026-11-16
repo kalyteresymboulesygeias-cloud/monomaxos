@@ -42,7 +42,7 @@ DISCLAIMER_BY_TYPE = {
     "gossip": "medical",
 }
 WORD_RANGE = {
-    "eortologio": (1000, 1500),
+    "eortologio": (300, 800),
     "zodia": (1000, 1500),
     "health": (1000, 1500),
     "nutrition": (1000, 1500),
@@ -50,6 +50,8 @@ WORD_RANGE = {
     "lifestyle": (1000, 1500),
     "gossip": (1000, 1500),
 }
+# Minimum H2 count; eortologio is the names block plus one saint section.
+MIN_H2 = {"eortologio": 2}
 # Athens wall-clock publish time; extra articles of the same type go +2h each.
 PUBLISH_TIME = {
     "eortologio": "06:00",

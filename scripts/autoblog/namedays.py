@@ -1,4 +1,4 @@
-"""Fixed and Easter-relative namedays for a date (Orthodox Easter via dateutil)."""
+"""Fixed and Easter-relative namedays and UN international days for a date (Orthodox Easter via dateutil)."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -29,4 +29,5 @@ def for_day(day: date) -> dict:
             feasts.append(rule["title"])
             groups.append(rule["names"])
     names = sorted({n for g in groups for n in g})
-    return {"date": day.isoformat(), "easter": pascha.isoformat(), "feasts": feasts, "groups": groups, "names": names}
+    world = util.read_json(config.DATA_DIR / "international_days.json", {}).get("days", {}).get(day.strftime("%m-%d"), [])
+    return {"date": day.isoformat(), "easter": pascha.isoformat(), "feasts": feasts, "groups": groups, "names": names, "world_days": world}
