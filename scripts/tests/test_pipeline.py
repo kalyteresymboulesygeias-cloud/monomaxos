@@ -101,6 +101,62 @@ class NegativeChecks(unittest.TestCase):
         fails = checks.eortologio_names(html, {"Μιχαήλ", "Μιχάλης"})
         self.assertEqual(fails, ["άγνωστο όνομα στο εορτολόγιο: Κλεάνθης"])
 
+    def test_nameday_block_lists_data_names_and_un_days(self):
+        from autoblog import namedays
+
+        data = namedays.for_day(date(2026, 11, 16))
+        block = render.nameday_block(date(2026, 11, 16), data["groups"], data["world_days"])
+        self.assertIn("<h2>16 Νοεμβρίου 2026</h2>", block)
+        self.assertIn("<p>Ιφιγένεια,<br>Ματθαίος,<br>Μαθαίος,<br>Μαθιός,<br>Ματθούλα,<br>Μαθούλα.</p>", block)
+        self.assertIn("Επίσης σήμερα είναι η Διεθνής Ημέρα Ανεκτικότητας και η Διεθνής Ημέρα Μεσογειακής Διατροφής.", block)
+
+    def test_saint_section_must_be_in_orthodox_synaxarion(self):
+        from autoblog import namedays
+
+        saints = namedays.for_day(date(2026, 11, 17))["saints"]
+        good = "<h2>17 Νοεμβρίου 2026</h2><h2>Ο Γρηγόριος ο Θαυματουργός στην παράδοση της 17 Νοεμβρίου 2026</h2>"
+        bad = "<h2>17 Νοεμβρίου 2026</h2><h2>Η αγία Χίλντα στην παράδοση της 17 Νοεμβρίου 2026</h2>"
+        self.assertEqual(checks.eortologio_saint(good, saints), [])
+        self.assertTrue(checks.eortologio_saint(bad, saints))
+        self.assertNotIn("Χίλντα", namedays.for_day(date(2026, 11, 17))["names"])
+
+    def test_movable_feast_saint_passes(self):
+        from autoblog import namedays
+
+        saints = namedays.for_day(date(2026, 4, 4))["saints"]
+        html = "<h2>4 Απριλίου 2026</h2><h2>Ο Λάζαρος στην παράδοση της 4 Απριλίου 2026</h2>"
+        self.assertEqual(checks.eortologio_saint(html, saints), [])
+
+    def test_third_declension_saint_passes(self):
+        saints = ["Λέοντος πάπα Ρώμης"]
+        html = "<h2>18 Φεβρουαρίου 2026</h2><h2>Ο Λέων στην παράδοση της 18 Φεβρουαρίου 2026</h2>"
+        self.assertEqual(checks.eortologio_saint(html, saints), [])
+
+    def test_nameday_block_has_calendar_note(self):
+        block = render.nameday_block(date(2026, 11, 17), [["Γεννάδιος"]], [])
+        self.assertIn("Για αλλαγή της ημερομηνίας στο παλαιό ημερολόγιο (Ιουλιανό) αφαιρέστε 13 ημέρες", block)
+
+    def test_nameday_block_without_un_day(self):
+        block = render.nameday_block(date(2026, 11, 17), [["Γρηγόριος", "Γρηγόρης"]], [])
+        self.assertNotIn("Επίσης", block)
+        self.assertIn("<p>Γρηγόριος,<br>Γρηγόρης.</p>", block)
+
+    def test_eortologio_structure(self):
+        body = (
+            "<p>Το τελώνιο βρίσκεται στην αρχή της αφήγησης.</p><h3>Τι Πρέπει να Θυμάσαι</h3>"
+            "<ul><li><strong>Α:</strong> ένα</li><li><strong>Β:</strong> δύο</li><li><strong>Γ:</strong> τρία</li><li><strong>Δ:</strong> τέσσερα</li></ul>"
+            "<h2>Ο Ματθαίος στην παράδοση</h2><p>Κείμενο.</p>"
+            "<p><em>Αποποίηση ευθύνης: Δεν αποτελούν θεολογική ερμηνεία ή επίσημη θέση της Εκκλησίας.</em></p>"
+        )
+        html = render.insert_after_takeaways(body, render.nameday_block(date(2026, 11, 16), [["Ιφιγένεια"]], []))
+        self.assertLess(html.index("</ul>"), html.index("<h2>16 Νοεμβρίου 2026</h2>"))
+        self.assertLess(html.index("<h2>16 Νοεμβρίου 2026</h2>"), html.index("Ο Ματθαίος στην παράδοση"))
+        self.assertEqual(checks.eortologio_structure(None, html), [])
+        faq = html.replace("<p><em>", "<h3>Ερώτηση;</h3><h3>Άλλη;</h3><table><tr><td>x</td></tr></table><p><em>")
+        self.assertTrue(checks.eortologio_structure(None, faq))
+        extra = html.replace("<p><em>", "<h2>Πώς να ευχηθείς</h2><p>Ευχές.</p><p><em>")
+        self.assertTrue(checks.eortologio_structure(None, extra))
+
     def test_invalid_internal_link_removed(self):
         html, stats = render.fix_links('<p><a href="https://monomaxos.gr/den-yparxei-pote/">x</a></p>', kind="health", known_slugs={"allo"}, self_slug=None)
         self.assertNotIn("<a", html)

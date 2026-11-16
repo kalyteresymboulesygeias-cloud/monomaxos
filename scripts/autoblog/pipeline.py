@@ -66,7 +66,9 @@ class Runner:
             if not data["names"]:
                 raise Skip("δεν υπάρχουν ονόματα για την ημέρα στα δεδομένα")
             plan["names"] = set(data["names"])
-            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False)
+            plan["nameday_block"] = render.nameday_block(self.day, data["groups"], data["world_days"])
+            plan["saints"] = data["saints"]
+            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False) + "\nΣυναξάρι της ημέρας (άγιοι της Ορθόδοξης Εκκλησίας):\n" + "\n".join(f"- {line}" for line in data["saints"])
         elif kind == "zodia":
             plan["previous"] = [self.ctx.body_text(i["slug"]) for i in self.ctx.recent({407}, 7, self.day) if i["slug"] != post["slug"]]
             plan["context"] = f"Ημέρα: {today}."
@@ -105,8 +107,10 @@ class Runner:
                 raise Skip("το μόνιμο άρθρο εορτολογίου ενημερώθηκε ήδη σήμερα")
             plan["update"] = bool(existing)
             plan["names"] = set(data["names"])
+            plan["nameday_block"] = render.nameday_block(self.day, data["groups"], data["world_days"])
+            plan["saints"] = data["saints"]
             plan["topic"] = f"Εορτολόγιο {self.day.day} {month}"
-            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False)
+            plan["context"] = f"Ημέρα: {today}.\nΓιορτές: {', '.join(data['feasts']) or 'μόνο σταθερές γιορτές'}.\nΟμάδες ονομάτων: " + json.dumps(data["groups"], ensure_ascii=False) + "\nΣυναξάρι της ημέρας (άγιοι της Ορθόδοξης Εκκλησίας):\n" + "\n".join(f"- {line}" for line in data["saints"])
         elif kind == "zodia":
             if self.ctx.on_date(407, self.day):
                 raise Skip("υπάρχουν ήδη ζώδια για σήμερα")
@@ -182,6 +186,8 @@ class Runner:
     def check(self, kind: str, plan: dict, article: Article) -> tuple[list[str], str, str]:
         slug = plan["slug"] or util.node_slugify(article.title)
         html = render.article_html(article.body_markdown)
+        if kind == "eortologio":
+            html = render.insert_after_takeaways(html, plan["nameday_block"])
         html, links = render.fix_links(html, kind=kind, known_slugs=self.ctx.slugs, self_slug=slug)
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
         if kind == "lifestyle":
@@ -201,10 +207,7 @@ class Runner:
                 extra_cliches=("μαγικό", "μαγική", "μαγικός", "μοιραίο", "μοιραία", "μοιραίος"),
             )
         elif kind == "eortologio":
-            fails += checks.editorial_structure(
-                article, html,
-                disclaimer=("αποποίηση ευθύνης", "δεν αποτελούν θεολογική ερμηνεία"),
-            )
+            fails += checks.eortologio_structure(article, html)
         if kind in EDITORIAL_KINDS:
             if not 1 <= links["internal"] <= 2:
                 fails.append(f"εσωτερικοί σύνδεσμοι {links['internal']}, ζητούνται 1-2 από τη λίστα")
@@ -213,7 +216,7 @@ class Runner:
         elif links["internal"] < 1:
             fails.append("χρειάζεται τουλάχιστον ένας έγκυρος εσωτερικός σύνδεσμος από τη λίστα")
         if kind == "eortologio":
-            fails += checks.eortologio_names(html, plan["names"])
+            fails += checks.eortologio_names(html, plan["names"]) + checks.eortologio_saint(html, plan["saints"])
         if kind == "zodia":
             # The fixed entertainment disclaimer is not treated as copied phrasing.
             repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if not any(w in item for w in ("ψυχαγωγ", "αστρολογ", "αποποι"))]

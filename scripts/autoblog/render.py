@@ -1,6 +1,7 @@
 """Markdown -> sanitized HTML, link policy and section helpers."""
 from __future__ import annotations
 
+from html import escape
 from urllib.parse import urlparse
 
 import markdown as md
@@ -34,6 +35,43 @@ def article_html(text: str) -> str:
     if raw.startswith("<") or "<h2" in raw[:400].lower() or "<p" in raw[:200].lower():
         return _clean(raw)
     return markdown_to_html(raw)
+
+
+CALENDAR_NOTE = (
+    "Οι αναφερόμενες ημερομηνίες είναι του τρέχοντος ημερολογίου (Γρηγοριανό) που τηρείται παγκοσμίως από όλες τις χώρες, "
+    "περιλαμβανομένης και της Ελλάδος. Για αλλαγή της ημερομηνίας στο παλαιό ημερολόγιο (Ιουλιανό) αφαιρέστε 13 ημέρες "
+    "από την ημερομηνία που αναγράφεται στο παρόν εορτολόγιο."
+)
+
+
+def nameday_block(day, groups: list[list[str]], world_days: list[str]) -> str:
+    """The names of the day exactly as in the data, one per line, then the UN days."""
+    names = list(dict.fromkeys(n for g in groups for n in g))
+    lines = "<br>".join(f"{escape(n)}{'.' if i == len(names) - 1 else ','}" for i, n in enumerate(names))
+    html = (
+        f"<h2>{day.day} {util.GREEK_MONTHS_GEN[day.month - 1]} {day.year}</h2>"
+        "<p>Τα ονόματα που γιορτάζουν σήμερα είναι τα εξής:</p>"
+        f"<p>{lines}</p>"
+    )
+    if world_days:
+        days = [f"η {escape(d)}" for d in world_days]
+        joined = days[0] if len(days) == 1 else ", ".join(days[:-1]) + " και " + days[-1]
+        html += f"<p>Επίσης σήμερα είναι {joined}.</p>"
+    return html + f"<p><em>{CALENDAR_NOTE}</em></p>"
+
+
+def insert_after_takeaways(html: str, block: str) -> str:
+    """Place the block right after the first list (the takeaways box), or before the first H2."""
+    soup = BeautifulSoup(html, "html.parser")
+    anchor = soup.find("ul")
+    fragment = BeautifulSoup(block, "html.parser")
+    if anchor is not None:
+        anchor.insert_after(fragment)
+    elif soup.find("h2") is not None:
+        soup.find("h2").insert_before(fragment)
+    else:
+        soup.append(fragment)
+    return str(soup)
 
 
 def _internal_slug(href: str) -> str | None:

@@ -20,8 +20,9 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
     count = render.word_count(html)
     if not low <= count <= high:
         fails.append(f"μήκος {count} λέξεις, ζητούνται {low}-{high}")
-    if len(render.h2_titles(html)) < 3:
-        fails.append("λιγότερα από 3 H2")
+    min_h2 = config.MIN_H2.get(kind, 3)
+    if len(render.h2_titles(html)) < min_h2:
+        fails.append(f"λιγότερα από {min_h2} H2")
     if "<h1" in html.lower() or re.search(r"^# ", article.body_markdown, re.M):
         fails.append("υπάρχει H1")
     if not 25 <= len(article.title) <= 60:
@@ -157,6 +158,37 @@ def source_overlap(html: str, source_texts: list[str]) -> list[str]:
     return [f"κοινή ακολουθία 8+ λέξεων με πηγή: «{s}»" for s in shared]
 
 
+def eortologio_structure(article, html: str) -> list[str]:
+    """Intro, takeaways, the generated names block, one saint section, disclaimer last."""
+    from bs4 import BeautifulSoup
+
+    fails: list[str] = []
+    soup = BeautifulSoup(html, "html.parser")
+    text = util.html_text(html)
+    start = util.fold(" ".join(text.split()[:8]))
+    if any(start.startswith(util.fold(opener)) for opener in OPENERS):
+        fails.append("απαγορευμένη εκκίνηση εισαγωγής")
+    bullets = soup.find("ul")
+    if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
+        fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
+    if len(soup.find_all("ul")) > 1 or soup.find(["ol", "table"]) is not None:
+        fails.append("μόνο το πλαίσιο «Τι Πρέπει να Θυμάσαι» ως λίστα, χωρίς πίνακα ή αριθμημένη λίστα")
+    h2s = render.h2_titles(html)
+    if len(h2s) != 2:
+        fails.append(f"{len(h2s)} ενότητες H2, ζητείται μία ενότητα για τον άγιο")
+    if len(soup.find_all("h3")) > 1:
+        fails.append("χωρίς υποενότητες ή συχνές ερωτήσεις σε H3")
+    last = soup.find_all("p")[-1:]
+    if not last or not all(util.fold(m) in util.fold(last[0].get_text(" ", strip=True)) for m in ("αποποίηση ευθύνης", "δεν αποτελούν θεολογική ερμηνεία")):
+        fails.append("το άρθρο πρέπει να τελειώνει με την αποποίηση ευθύνης")
+    padded = f" {util.fold(text)} "
+    for phrase in EDITORIAL_CLICHES:
+        if f" {util.fold(phrase)} " in padded:
+            fails.append(f"κλισέ λέξη: {phrase}")
+            break
+    return fails
+
+
 NAME_WORDS = {"και", "σημερα", "οι", "η", "ο", "αγιοσ", "αγια", "αγιου", "αγιασ", "αγιοι", "οσιοσ", "οσια"}
 
 
@@ -189,6 +221,21 @@ def eortologio_names(html: str, allowed: set[str]) -> list[str]:
     if not saw_name and not any(util.fold(n) in util.fold(soup.get_text(" ", strip=True)) for n in allowed):
         fails.append("δεν εμφανίζεται κανένα όνομα από το εορτολόγιο της ημέρας")
     return fails
+
+
+def eortologio_saint(html: str, saints: list[str]) -> list[str]:
+    """The saint section heading must name someone in the Orthodox synaxarion of the day."""
+    h2s = render.h2_titles(html)
+    if len(h2s) < 2:
+        return []
+    calendar = {util.fold(w) for w in (*util.GREEK_DAYS, *util.GREEK_MONTHS_GEN)} | NAME_WORDS
+    names = [util.fold(w) for w in CAPITALIZED.findall(h2s[-1])]
+    # Λέων/Λέοντος, Σίμων/Σίμωνος: compare with ω folded to ο.
+    names = [n.replace("ω", "ο") for n in names if n not in calendar and len(n) > 2]
+    tokens = {t.replace("ω", "ο") for t in util.words(" ".join(saints))}
+    if not names or not any(any(t.startswith(n[: max(3, len(n) - 2)]) for t in tokens) for n in names):
+        return [f"η ενότητα «{h2s[-1]}» δεν αφορά άγιο του ορθόδοξου συναξαριού της ημέρας"]
+    return []
 
 
 def zodia_signs(html: str) -> list[str]:
