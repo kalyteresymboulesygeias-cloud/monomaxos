@@ -230,8 +230,9 @@ def eortologio_saint(html: str, saints: list[str]) -> list[str]:
         return []
     calendar = {util.fold(w) for w in (*util.GREEK_DAYS, *util.GREEK_MONTHS_GEN)} | NAME_WORDS
     names = [util.fold(w) for w in CAPITALIZED.findall(h2s[-1])]
-    names = [n for n in names if n not in calendar and len(n) > 2]
-    tokens = set(util.words(" ".join(saints)))
+    # Λέων/Λέοντος, Σίμων/Σίμωνος: compare with ω folded to ο.
+    names = [n.replace("ω", "ο") for n in names if n not in calendar and len(n) > 2]
+    tokens = {t.replace("ω", "ο") for t in util.words(" ".join(saints))}
     if not names or not any(any(t.startswith(n[: max(3, len(n) - 2)]) for t in tokens) for n in names):
         return [f"η ενότητα «{h2s[-1]}» δεν αφορά άγιο του ορθόδοξου συναξαριού της ημέρας"]
     return []

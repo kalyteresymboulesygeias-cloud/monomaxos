@@ -127,6 +127,11 @@ class NegativeChecks(unittest.TestCase):
         html = "<h2>4 Απριλίου 2026</h2><h2>Ο Λάζαρος στην παράδοση της 4 Απριλίου 2026</h2>"
         self.assertEqual(checks.eortologio_saint(html, saints), [])
 
+    def test_third_declension_saint_passes(self):
+        saints = ["Λέοντος πάπα Ρώμης"]
+        html = "<h2>18 Φεβρουαρίου 2026</h2><h2>Ο Λέων στην παράδοση της 18 Φεβρουαρίου 2026</h2>"
+        self.assertEqual(checks.eortologio_saint(html, saints), [])
+
     def test_nameday_block_has_calendar_note(self):
         block = render.nameday_block(date(2026, 11, 17), [["Γεννάδιος"]], [])
         self.assertIn("Για αλλαγή της ημερομηνίας στο παλαιό ημερολόγιο (Ιουλιανό) αφαιρέστε 13 ημέρες", block)
