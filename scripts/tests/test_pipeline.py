@@ -128,6 +128,8 @@ class NegativeChecks(unittest.TestCase):
         self.assertEqual(checks.eortologio_structure(None, html), [])
         faq = html.replace("<p><em>", "<h3>Ερώτηση;</h3><h3>Άλλη;</h3><table><tr><td>x</td></tr></table><p><em>")
         self.assertTrue(checks.eortologio_structure(None, faq))
+        extra = html.replace("<p><em>", "<h2>Πώς να ευχηθείς</h2><p>Ευχές.</p><p><em>")
+        self.assertTrue(checks.eortologio_structure(None, extra))
 
     def test_invalid_internal_link_removed(self):
         html, stats = render.fix_links('<p><a href="https://monomaxos.gr/den-yparxei-pote/">x</a></p>', kind="health", known_slugs={"allo"}, self_slug=None)

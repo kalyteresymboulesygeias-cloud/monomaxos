@@ -174,7 +174,7 @@ def eortologio_structure(article, html: str) -> list[str]:
     if len(soup.find_all("ul")) > 1 or soup.find(["ol", "table"]) is not None:
         fails.append("μόνο το πλαίσιο «Τι Πρέπει να Θυμάσαι» ως λίστα, χωρίς πίνακα ή αριθμημένη λίστα")
     h2s = render.h2_titles(html)
-    if not 2 <= len(h2s) <= 3:
+    if len(h2s) != 2:
         fails.append(f"{len(h2s)} ενότητες H2, ζητείται μία ενότητα για τον άγιο")
     if len(soup.find_all("h3")) > 1:
         fails.append("χωρίς υποενότητες ή συχνές ερωτήσεις σε H3")
