@@ -223,6 +223,20 @@ def eortologio_names(html: str, allowed: set[str]) -> list[str]:
     return fails
 
 
+def eortologio_saint(html: str, saints: list[str]) -> list[str]:
+    """The saint section heading must name someone in the Orthodox synaxarion of the day."""
+    h2s = render.h2_titles(html)
+    if len(h2s) < 2:
+        return []
+    calendar = {util.fold(w) for w in (*util.GREEK_DAYS, *util.GREEK_MONTHS_GEN)} | NAME_WORDS
+    names = [util.fold(w) for w in CAPITALIZED.findall(h2s[-1])]
+    names = [n for n in names if n not in calendar and len(n) > 2]
+    tokens = set(util.words(" ".join(saints)))
+    if not names or not any(any(t.startswith(n[: max(3, len(n) - 2)]) for t in tokens) for n in names):
+        return [f"η ενότητα «{h2s[-1]}» δεν αφορά άγιο του ορθόδοξου συναξαριού της ημέρας"]
+    return []
+
+
 def zodia_signs(html: str) -> list[str]:
     folded = util.fold(util.html_text(html))
     missing = [sign for sign in ZODIA_ORDER if util.fold(sign) not in folded]

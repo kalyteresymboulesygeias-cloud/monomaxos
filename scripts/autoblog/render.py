@@ -37,6 +37,13 @@ def article_html(text: str) -> str:
     return markdown_to_html(raw)
 
 
+CALENDAR_NOTE = (
+    "Οι αναφερόμενες ημερομηνίες είναι του τρέχοντος ημερολογίου (Γρηγοριανό) που τηρείται παγκοσμίως από όλες τις χώρες, "
+    "περιλαμβανομένης και της Ελλάδος. Για αλλαγή της ημερομηνίας στο παλαιό ημερολόγιο (Ιουλιανό) αφαιρέστε 13 ημέρες "
+    "από την ημερομηνία που αναγράφεται στο παρόν εορτολόγιο."
+)
+
+
 def nameday_block(day, groups: list[list[str]], world_days: list[str]) -> str:
     """The names of the day exactly as in the data, one per line, then the UN days."""
     names = list(dict.fromkeys(n for g in groups for n in g))
@@ -50,7 +57,7 @@ def nameday_block(day, groups: list[list[str]], world_days: list[str]) -> str:
         days = [f"η {escape(d)}" for d in world_days]
         joined = days[0] if len(days) == 1 else ", ".join(days[:-1]) + " και " + days[-1]
         html += f"<p>Επίσης σήμερα είναι {joined}.</p>"
-    return html
+    return html + f"<p><em>{CALENDAR_NOTE}</em></p>"
 
 
 def insert_after_takeaways(html: str, block: str) -> str:
