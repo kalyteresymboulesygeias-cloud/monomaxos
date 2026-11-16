@@ -31,7 +31,7 @@ def for_day(day: date) -> dict:
     names = sorted({n for g in groups for n in g})
     key = day.strftime("%m-%d")
     world = util.read_json(config.DATA_DIR / "international_days.json", {}).get("days", {}).get(key, [])
-    saints = util.read_json(config.DATA_DIR / "orthodox_synaxarion.json", {}).get("days", {}).get(key, [])
+    saints = feasts + util.read_json(config.DATA_DIR / "orthodox_synaxarion.json", {}).get("days", {}).get(key, [])
     return {
         "date": day.isoformat(), "easter": pascha.isoformat(), "feasts": feasts, "groups": groups, "names": names,
         "world_days": world, "saints": saints,

@@ -120,6 +120,13 @@ class NegativeChecks(unittest.TestCase):
         self.assertTrue(checks.eortologio_saint(bad, saints))
         self.assertNotIn("Χίλντα", namedays.for_day(date(2026, 11, 17))["names"])
 
+    def test_movable_feast_saint_passes(self):
+        from autoblog import namedays
+
+        saints = namedays.for_day(date(2026, 4, 4))["saints"]
+        html = "<h2>4 Απριλίου 2026</h2><h2>Ο Λάζαρος στην παράδοση της 4 Απριλίου 2026</h2>"
+        self.assertEqual(checks.eortologio_saint(html, saints), [])
+
     def test_nameday_block_has_calendar_note(self):
         block = render.nameday_block(date(2026, 11, 17), [["Γεννάδιος"]], [])
         self.assertIn("Για αλλαγή της ημερομηνίας στο παλαιό ημερολόγιο (Ιουλιανό) αφαιρέστε 13 ημέρες", block)
