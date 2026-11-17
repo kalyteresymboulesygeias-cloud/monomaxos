@@ -190,6 +190,16 @@ class NegativeChecks(unittest.TestCase):
         html = "<p>Λέγεται ότι η Μαρία Παπαδοπούλου θα χωριστεί σύντομα.</p>"
         self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
 
+    def test_augmented_death_still_fails(self):
+        html = "<p>Φήμες λένε ότι η Μαρία Παπαδοπούλου απέθανε ξαφνικά.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου αποχωρίστηκε από τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+
+    def test_athanatos_is_not_a_death_claim(self):
+        html = "<p>Η Μαρία Παπαδοπούλου μένει αθάνατη στη μνήμη του κοινού.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
     def test_xexorizei_is_not_a_divorce_claim(self):
         html = "<p>Η Μαρία Παπαδοπούλου ξεχωρίζει για τη δουλειά της στη σκηνή.</p>"
         self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])

@@ -68,15 +68,33 @@ def _named_person(sentence: str) -> bool:
     return len(caps) > 1 or bool(caps and not sentence.strip().startswith(caps[0]))
 
 
+# One-letter past augment, only for verb stems. «αθάνατος» must not match «θανατ».
+_VERBAL_AUGMENT = ("α", "ε")
+_AUGMENTED_ROOTS = {"πεθαν", "πεθαιν"}
+# Real prefixes on the same stem. «ξεχωρίζει» is not one of them.
+_STEM_PREFIXES = ("απο", "ξανα", "κατα", "συν")
+
+
+def _stem_in_token(token: str, root: str) -> bool:
+    if token.startswith(root):
+        return True
+    if root in _AUGMENTED_ROOTS and any(token.startswith(mark + root) for mark in _VERBAL_AUGMENT):
+        return True
+    return any(token.startswith(prefix + root) for prefix in _STEM_PREFIXES)
+
+
 def _root_hit(folded: str, roots: list[str]) -> str | None:
-    """A stem counts only at the start of a word. «ξεχωρίζει» is not «χωρίζει», and «χωρίς» is not «χωρισμός»."""
+    """Match a stem at the start of a word, after a past augment, or after a real prefix.
+
+    «απέθανε» counts as «πεθαν». «ξεχωρίζει» does not count as «χωρίζει», and «χωρίς» is not «χωρισμός».
+    """
     tokens = util.words(folded)
     for root in roots:
         if " " in root:
             if root in folded:
                 return root
             continue
-        if any(token.startswith(root) for token in tokens):
+        if any(_stem_in_token(token, root) for token in tokens):
             return root
     return None
 
