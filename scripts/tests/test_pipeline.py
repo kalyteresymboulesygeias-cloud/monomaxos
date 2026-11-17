@@ -196,6 +196,14 @@ class NegativeChecks(unittest.TestCase):
         html = "<p>Η Μαρία Παπαδοπούλου αποχωρίστηκε από τον σύντροφό της.</p>"
         self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
 
+    def test_register_and_immortalize_are_not_private_claims(self):
+        html = "<p>Η Μαρία Παπαδοπούλου καταχώρισε το νέο της σήμα.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Ο Νίκος Παπαδόπουλος καταχωρίζει κάθε εμφάνιση στο αρχείο.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου αποθανάτισε τη βραδιά με μια φωτογραφία.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
     def test_athanatos_is_not_a_death_claim(self):
         html = "<p>Η Μαρία Παπαδοπούλου μένει αθάνατη στη μνήμη του κοινού.</p>"
         self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
