@@ -71,18 +71,21 @@ def _named_person(sentence: str) -> bool:
 # One-letter past augment, only for verb stems. «αθάνατος» must not match «θανατ».
 _VERBAL_AUGMENT = ("α", "ε")
 _AUGMENTED_ROOTS = {"πεθαν", "πεθαιν"}
-# Only divorce stems take these prefixes. «καταχωρίζει» is not a breakup, and «αποθανάτισε» is not a death.
+# «ξανασυνελήφθη» and «επανενοσηλεύτηκε» stay blocked. «καταχωρίζει» and «αποθανάτισε» do not.
+_REPEAT_PREFIXES = ("ξανα", "επανα")
 _DIVORCE_ROOTS = {
     "χωρισμ", "χωρισε", "χωρισαν", "χωρισαμ", "χωρισατ",
     "χωρισουν", "χωριστηκ", "χωριστε", "χωριστου", "χωριζ",
 }
-_DIVORCE_PREFIXES = ("απο", "ξανα")
+_DIVORCE_PREFIXES = ("απο",)
 
 
 def _stem_in_token(token: str, root: str) -> bool:
     if token.startswith(root):
         return True
     if root in _AUGMENTED_ROOTS and any(token.startswith(mark + root) for mark in _VERBAL_AUGMENT):
+        return True
+    if any(token.startswith(prefix + root) for prefix in _REPEAT_PREFIXES):
         return True
     if root in _DIVORCE_ROOTS:
         return any(token.startswith(prefix + root) for prefix in _DIVORCE_PREFIXES)

@@ -196,6 +196,16 @@ class NegativeChecks(unittest.TestCase):
         html = "<p>Η Μαρία Παπαδοπούλου αποχωρίστηκε από τον σύντροφό της.</p>"
         self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
 
+    def test_repeated_private_claims_still_fail(self):
+        for sentence in (
+            "Φήμες λένε ότι η Μαρία Παπαδοπούλου ξανασυνελήφθη χθες.",
+            "Ο Νίκος Παπαδόπουλος επαναπροφυλακίστηκε μετά την απόφαση.",
+            "Η Μαρία Παπαδοπούλου ξανανοσηλεύτηκε την ίδια εβδομάδα.",
+            "Ο Νίκος Παπαδόπουλος ξαναχρεοκόπησε μέσα στη χρονιά.",
+        ):
+            html = f"<p>{sentence}</p>"
+            self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False), sentence)
+
     def test_register_and_immortalize_are_not_private_claims(self):
         html = "<p>Η Μαρία Παπαδοπούλου καταχώρισε το νέο της σήμα.</p>"
         self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
