@@ -71,8 +71,9 @@ def _named_person(sentence: str) -> bool:
 # One-letter past augment, only for verb stems. «αθάνατος» must not match «θανατ».
 _VERBAL_AUGMENT = ("α", "ε")
 _AUGMENTED_ROOTS = {"πεθαν", "πεθαιν"}
-# «ξανασυνελήφθη» and «επανενοσηλεύτηκε» stay blocked. «καταχωρίζει» and «αποθανάτισε» do not.
-_REPEAT_PREFIXES = ("ξανα", "επανα")
+# «επανενοσηλεύτηκε» is επαν- plus the past augment ε, not επανα- glued to the stem.
+# «καταχωρίζει» and «αποθανάτισε» stay outside this list.
+_REPEAT_PREFIXES = ("ξανα", "επανα", "επανε", "επαν")
 _DIVORCE_ROOTS = {
     "χωρισμ", "χωρισε", "χωρισαν", "χωρισαμ", "χωρισατ",
     "χωρισουν", "χωριστηκ", "χωριστε", "χωριστου", "χωριζ",

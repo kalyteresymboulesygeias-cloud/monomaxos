@@ -201,6 +201,7 @@ class NegativeChecks(unittest.TestCase):
             "Φήμες λένε ότι η Μαρία Παπαδοπούλου ξανασυνελήφθη χθες.",
             "Ο Νίκος Παπαδόπουλος επαναπροφυλακίστηκε μετά την απόφαση.",
             "Η Μαρία Παπαδοπούλου ξανανοσηλεύτηκε την ίδια εβδομάδα.",
+            "Η Μαρία Παπαδοπούλου επανενοσηλεύτηκε την ίδια εβδομάδα.",
             "Ο Νίκος Παπαδόπουλος ξαναχρεοκόπησε μέσα στη χρονιά.",
         ):
             html = f"<p>{sentence}</p>"
@@ -212,6 +213,8 @@ class NegativeChecks(unittest.TestCase):
         html = "<p>Ο Νίκος Παπαδόπουλος καταχωρίζει κάθε εμφάνιση στο αρχείο.</p>"
         self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
         html = "<p>Η Μαρία Παπαδοπούλου αποθανάτισε τη βραδιά με μια φωτογραφία.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου μίλησε για την επανάσταση του 1821.</p>"
         self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
 
     def test_athanatos_is_not_a_death_claim(self):
