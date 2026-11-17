@@ -79,7 +79,7 @@ def main() -> int:
     phase = config.phase()
     limits = config.DAILY_LIMIT[phase]
     done = clock.satisfied(load_records(), now.date(), slot, limits)
-    proceed, sleep, reason = clock.decide(now, slot, done)
+    proceed, sleep, reason = clock.decide(now, slot, done, catch_up=schedule in clock.CATCH_UP_CRONS)
     print(reason)
     emit({
         "proceed": "true" if proceed else "false",

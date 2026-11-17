@@ -53,6 +53,18 @@ class Clock(unittest.TestCase):
         self.assertTrue(proceed)
         self.assertEqual(sleep, 0)
 
+    def test_on_time_evening_offset_does_not_publish(self):
+        # 20:07 UTC is 22:07 in Athens in November. That cron exists so a
+        # multi-hour GitHub delay lands near 06:00, not so it publishes at night.
+        proceed, sleep, reason = clock.decide(at("2026-11-17T22:07:00"), "morning", False)
+        self.assertFalse(proceed, reason)
+        self.assertEqual(sleep, 0)
+
+    def test_legacy_cron_still_catches_up_later_the_same_day(self):
+        proceed, sleep, reason = clock.decide(at("2026-11-17T14:34:00"), "morning", False, catch_up=True)
+        self.assertTrue(proceed, reason)
+        self.assertEqual(sleep, 0)
+
     def test_does_not_repeat_a_finished_slot(self):
         proceed, _sleep, reason = clock.decide(at("2026-11-17T06:05:00"), "morning", True)
         self.assertFalse(proceed)

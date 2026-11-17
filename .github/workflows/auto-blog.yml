@@ -4,7 +4,9 @@ name: auto-blog
 # (06:00, 09:00, 13:00), live in scripts/autoblog/clock.py.
 # GitHub starts these hours late, so each slot also has crons 6–10 hours
 # earlier. A run that is more than 40 minutes early exits. One that is close
-# waits until the slot. The original three stay as a late catch-up.
+# waits until the slot. Those early crons only publish within 90 minutes after
+# the slot, so an on-time evening start does not publish. The original three
+# stay as a late catch-up.
 on:
   schedule:
     - cron: "0 4 * * *"

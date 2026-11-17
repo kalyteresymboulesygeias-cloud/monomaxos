@@ -4,7 +4,9 @@ GitHub Actions starts a `schedule` event hours after the clock time we ask for.
 The workflow therefore registers several daily crons for each slot: the real
 Athens hour, and the same hour 6–10 hours earlier. A run that starts too early
 does nothing. The first run that starts shortly before the slot waits, then
-publishes. A run that starts after the slot publishes immediately, once.
+publishes. An early cron only publishes in the 90 minutes after the slot, so
+one that starts on time in the evening does not publish the morning articles.
+The original three crons stay as the catch-up if the earlier ones never land.
 """
 from __future__ import annotations
 
@@ -16,6 +18,9 @@ ATHENS = ZoneInfo("Europe/Athens")
 # How early a run may be and still wait for the slot. The job timeout is 90
 # minutes and generation needs the rest, so this stays under 40 minutes.
 EARLY_WINDOW = timedelta(minutes=40)
+# How late an early cron may be and still publish. Wider than that is the
+# evening, and those runs must not publish today's slot.
+LATE_WINDOW = timedelta(minutes=90)
 
 # Offsets that match the delays seen on this repo (about 6–10 hours).
 DELAY_OFFSETS_H = (6, 7, 8, 9, 10)
@@ -55,6 +60,7 @@ def cron_expressions() -> list[tuple[str, str]]:
 
 
 SLOT_BY_CRON = {expr: name for expr, name in cron_expressions()}
+CATCH_UP_CRONS = {expr for expr, _name in LEGACY_CRONS}
 
 
 def slot_target(now: datetime, slot: str) -> datetime:
@@ -80,8 +86,12 @@ def satisfied(records: list[dict], day, slot: str, limits: dict[str, int]) -> bo
     return True
 
 
-def decide(now: datetime, slot: str, done: bool) -> tuple[bool, int, str]:
-    """Return (publish, seconds to wait, reason). `now` is Athens local time."""
+def decide(now: datetime, slot: str, done: bool, *, catch_up: bool = False) -> tuple[bool, int, str]:
+    """Return (publish, seconds to wait, reason). `now` is Athens local time.
+
+    `catch_up` is only for the original three crons. The earlier ones publish
+    inside a window around the slot, so an on-time evening start does nothing.
+    """
     if now.tzinfo is None:
         now = now.replace(tzinfo=ATHENS)
     if done:
@@ -93,4 +103,8 @@ def decide(now: datetime, slot: str, done: bool) -> tuple[bool, int, str]:
         return False, 0, f"{slot}: νωρίς κατά {minutes} λεπτά"
     if early.total_seconds() > 0:
         return True, int(early.total_seconds()), f"{slot}: αναμονή ως {target.strftime('%H:%M')}"
-    return True, 0, f"{slot}: ώρα δημοσίευσης"
+    late = now - target
+    if catch_up or late <= LATE_WINDOW:
+        return True, 0, f"{slot}: ώρα δημοσίευσης"
+    minutes = int(late.total_seconds() // 60)
+    return False, 0, f"{slot}: {minutes} λεπτά μετά το παράθυρο"
