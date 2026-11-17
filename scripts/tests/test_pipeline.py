@@ -185,6 +185,16 @@ class NegativeChecks(unittest.TestCase):
         self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
         html = "<p>Η Μαρία Παπαδοπούλου μίλησε για τον χωρισμό της.</p>"
         self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου χωρίστηκε από τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Λέγεται ότι η Μαρία Παπαδοπούλου θα χωριστεί σύντομα.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+
+    def test_xexorizei_is_not_a_divorce_claim(self):
+        html = "<p>Η Μαρία Παπαδοπούλου ξεχωρίζει για τη δουλειά της στη σκηνή.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου ξεχώρισε στην παράσταση της Αθήνας.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
 
     def test_zodia_disclaimer_is_not_repetition(self):
         disclaimer = (
@@ -206,6 +216,29 @@ class NegativeChecks(unittest.TestCase):
         title = "Ζώδια σήμερα: Ο οδηγός σου για τις 17 Νοεμβρίου 2026"
         self.assertIsNotNone(ctx.similar_title(title, config.SIMILARITY_REJECT))
         self.assertIsNone(ctx.similar_title(title, config.SIMILARITY_REJECT, {407}))
+
+    def test_lifestyle_does_not_need_takeaways_or_plan(self):
+        article = zodia_article("kapoio-arthro").model_copy(update={"focus_keyword": "Θέμα", "title": "Θέμα που μένει μέσα στο όριο τίτλου"})
+        html = (
+            "<p>Εισαγωγή για το θέμα, χωρίς λίστα από κάτω.</p>"
+            "<h2>Θέμα στην πρώτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στη δεύτερη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στην τρίτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στην τέταρτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<p><em>Αποποίηση ευθύνης: Οι αναφορές βασίζονται σε δημόσια γνωστές πληροφορίες.</em></p>"
+        )
+        fails = checks.editorial_structure(
+            article, html,
+            disclaimer=("αποποίηση ευθύνης", "δημόσια γνωστές πληροφορίες"),
+            h2_range=(4, 6),
+            require_closing=False,
+            require_takeaways=False,
+            require_steps=False,
+        )
+        self.assertEqual(fails, [])
+        still_required = checks.editorial_structure(article, html, require_closing=False)
+        self.assertTrue(any("Θυμάσαι" in item for item in still_required))
+        self.assertTrue(any("πλάνο" in item for item in still_required))
 
     def test_lifestyle_meta_near_miss_passes(self):
         ctx = ContentIndex(config.CONTENT_DIR)

@@ -68,13 +68,26 @@ def _named_person(sentence: str) -> bool:
     return len(caps) > 1 or bool(caps and not sentence.strip().startswith(caps[0]))
 
 
+def _root_hit(folded: str, roots: list[str]) -> str | None:
+    """A stem counts only at the start of a word. «ξεχωρίζει» is not «χωρίζει», and «χωρίς» is not «χωρισμός»."""
+    tokens = util.words(folded)
+    for root in roots:
+        if " " in root:
+            if root in folded:
+                return root
+            continue
+        if any(token.startswith(root) for token in tokens):
+            return root
+    return None
+
+
 def blocked_claims(html: str, blocked: dict, official_sources: bool) -> list[str]:
     fails = []
     roots = [util.fold(r) for r in blocked["roots"]]
     markers = [util.fold(m) for m in blocked["official_markers"]]
     for sentence in SENTENCE_SPLIT.split(util.html_text(html)):
         folded = util.fold(sentence)
-        hit = next((r for r in roots if r in folded), None)
+        hit = _root_hit(folded, roots)
         if not hit or not _named_person(sentence):
             continue
         if official_sources and any(m in folded for m in markers):
@@ -109,8 +122,10 @@ def editorial_structure(
     extra_cliches: tuple[str, ...] = (),
     h2_range: tuple[int, int] = (5, 8),
     require_closing: bool = True,
+    require_takeaways: bool = True,
+    require_steps: bool = True,
 ) -> list[str]:
-    """House template: takeaways, sections, steps, five questions, a real closing title, disclaimer."""
+    """House template: sections, disclaimer, and, where the type asks for them, takeaways and a plan."""
     from bs4 import BeautifulSoup
 
     fails: list[str] = []
@@ -121,10 +136,11 @@ def editorial_structure(
     start = util.fold(" ".join(text.split()[:8]))
     if any(start.startswith(util.fold(opener)) for opener in OPENERS):
         fails.append("απαγορευμένη εκκίνηση εισαγωγής")
-    bullets = soup.find("ul")
-    if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
-        fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
-    if soup.find("ol") is None:
+    if require_takeaways:
+        bullets = soup.find("ul")
+        if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
+            fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
+    if require_steps and soup.find("ol") is None:
         fails.append("λείπει αριθμημένη λίστα ή πρακτικό πλάνο")
     h2s = render.h2_titles(html)
     low_h2, high_h2 = h2_range

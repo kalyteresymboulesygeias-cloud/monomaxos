@@ -205,6 +205,8 @@ class Runner:
                 extra_cliches=("μεταμορφωτικός", "μεταμορφωτική", "μεταμορφωτικό", "σοκαριστικό", "σοκαριστικός", "σοκαριστική"),
                 h2_range=(4, 6),
                 require_closing=False,
+                require_takeaways=False,
+                require_steps=False,
             )
         elif kind in EDITORIAL_KINDS:
             fails += checks.editorial_structure(article, html)
