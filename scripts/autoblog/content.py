@@ -48,8 +48,11 @@ class ContentIndex:
         key = day.isoformat()
         return [item for item in self.index if item["date"][:10] == key and category_id in item["categories"]]
 
-    def similar_title(self, title: str, threshold: float) -> str | None:
+    def similar_title(self, title: str, threshold: float, skip_categories: set[int] | None = None) -> str | None:
+        skip = skip_categories or set()
         for item in self.index:
+            if skip and set(item.get("categories") or []) & skip:
+                continue
             if util.similarity(title, item["title"]) > threshold:
                 return item["title"]
         return None

@@ -176,6 +176,62 @@ class NegativeChecks(unittest.TestCase):
         html, _ = render.fix_links('<p><a href="https://eody.gov.gr/a">ΕΟΔΥ</a></p>', kind="health", known_slugs=set(), self_slug=None)
         self.assertIn("eody.gov.gr", html)
 
+    def test_choris_is_not_a_divorce_claim(self):
+        html = "<p>Συμφώνησε τη διάθεση: Ρώτησε αν προτιμά κουβέντα, χωρίς να οργανώσεις πολλές επιλογές.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
+    def test_divorce_claim_still_fails(self):
+        html = "<p>Φήμες λένε ότι η Μαρία Παπαδοπούλου χώρισε τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου μίλησε για τον χωρισμό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+
+    def test_zodia_disclaimer_is_not_repetition(self):
+        disclaimer = (
+            "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ψυχαγωγικό και ενημερωτικό χαρακτήρα. "
+            "Η αστρολογία δεν αποτελεί επιστήμη και δεν πρέπει να χρησιμοποιείται ως βάση για σημαντικές αποφάσεις. "
+            "Οι πληροφορίες προέρχονται από την αστρολογική παράδοση και τις δημοφιλείς ερμηνείες."
+        )
+        html = f"<h2>Συχνές ερωτήσεις για τα ζώδια της ημέρας</h2><p>Νέα πρόβλεψη για τον Κριό σήμερα.</p><p><em>{disclaimer}</em></p>"
+        previous = [disclaimer + " Συχνές ερωτήσεις για τα ζώδια της ημέρας 2026 αξιολόγησε την με βάση τη δική σου εμπειρία"]
+        self.assertEqual(checks.zodia_repetition(html, previous), [])
+
+    def test_zodia_copied_sentence_still_fails(self):
+        sentence = "η πρωινή βόλτα μένει σύντομη και χωρίς βιασύνη όταν ο καιρός είναι βαρύς στην πόλη"
+        html = f"<p>{sentence}</p>"
+        self.assertTrue(checks.zodia_repetition(html, [sentence]))
+
+    def test_daily_zodia_title_is_not_a_duplicate(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        title = "Ζώδια σήμερα: Ο οδηγός σου για τις 17 Νοεμβρίου 2026"
+        self.assertIsNotNone(ctx.similar_title(title, config.SIMILARITY_REJECT))
+        self.assertIsNone(ctx.similar_title(title, config.SIMILARITY_REJECT, {407}))
+
+    def test_lifestyle_meta_near_miss_passes(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        article = zodia_article("kapoio-arthro")
+        article = article.model_copy(update={"meta_description": "α" * 166, "title": "Ένας εντελώς νέος τίτλος lifestyle για το τεστ"})
+        fails = checks.common(
+            article,
+            "<p>" + ("λέξη " * 200) + "</p>",
+            kind="lifestyle",
+            slug="neo-slug-pou-den-yparxei-pote",
+            ctx=ctx,
+        )
+        self.assertFalse(any(item.startswith("meta ") for item in fails), fails)
+
+    def test_zodia_missing_link_is_inserted(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        link = next(item["slug"] for item in ctx.index if 19 in item["categories"])
+        article = zodia_article(link)
+        article = article.model_copy(update={"body_markdown": article.body_markdown.replace(f'<a href="{config.SITE}/{link}/">οδηγό</a>', "οδηγό")})
+        runner = Runner(date(2027, 11, 9), dry_run=True, commit=False, log=lambda *_: None)
+        plan = runner.plan("zodia", 0)
+        fails, html, _slug = runner.check("zodia", plan, article)
+        self.assertNotIn("<a href=", article.body_markdown)
+        self.assertIn("<a href=", html)
+        self.assertFalse(any("σύνδεσμο" in item for item in fails), fails)
+
     def test_sanitizer_drops_scripts_and_h1(self):
         html = render.markdown_to_html("# Τίτλος\n\n<script>alert(1)</script>\n\nκείμενο")
         self.assertNotIn("<script", html)

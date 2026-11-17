@@ -43,11 +43,11 @@ DISCLAIMER_BY_TYPE = {
 }
 WORD_RANGE = {
     "eortologio": (300, 800),
-    "zodia": (1000, 1500),
+    "zodia": (900, 1600),
     "health": (1000, 1500),
     "nutrition": (1000, 1500),
     "news": (1000, 1500),
-    "lifestyle": (1000, 1500),
+    "lifestyle": (900, 1600),
     "gossip": (1000, 1500),
 }
 # Minimum H2 count; eortologio is the names block plus one saint section.

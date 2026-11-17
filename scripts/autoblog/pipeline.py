@@ -15,7 +15,10 @@ from .gemini import Article, Gemini, GenerationError, Verdict
 from .openai_llm import OpenAIWriter
 from .prompts import EDITORIAL_KINDS, TYPE_RULES, VALIDATOR, system_prompt
 
-VALIDATED = {"news", "lifestyle", "gossip", "health", "nutrition"}
+# Lifestyle is not sent to the second AI reviewer. That pass was rejecting
+# internal links and practical advice to the reader. Private-life claims are
+# still blocked by the deterministic checks below.
+VALIDATED = {"news", "gossip", "health", "nutrition"}
 NEWS = {"news", "lifestyle", "gossip"}
 
 
@@ -189,6 +192,11 @@ class Runner:
         if kind == "eortologio":
             html = render.insert_after_takeaways(html, plan["nameday_block"])
         html, links = render.fix_links(html, kind=kind, known_slugs=self.ctx.slugs, self_slug=slug)
+        if kind in ("zodia", "lifestyle") and links["internal"] < 1:
+            picked = linking.candidates(self.ctx, plan["category"], plan.get("topic") or article.title, exclude=slug)
+            if picked:
+                html = render.ensure_internal_link(html, picked[0]["slug"], picked[0]["title"])
+                links["internal"] += 1
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
         if kind == "lifestyle":
             fails += checks.editorial_structure(
@@ -211,16 +219,18 @@ class Runner:
         if kind in EDITORIAL_KINDS:
             if not 1 <= links["internal"] <= 2:
                 fails.append(f"εσωτερικοί σύνδεσμοι {links['internal']}, ζητούνται 1-2 από τη λίστα")
-            if not 1 <= links["official"] <= 2:
+            # A celebrity lifestyle piece does not need a health-agency link.
+            if kind == "lifestyle":
+                if links["official"] > 2:
+                    fails.append(f"σύνδεσμοι αυθεντικών φορέων {links['official']}, μέγιστο 2")
+            elif not 1 <= links["official"] <= 2:
                 fails.append(f"σύνδεσμοι αυθεντικών φορέων {links['official']}, ζητούνται 1-2")
         elif links["internal"] < 1:
             fails.append("χρειάζεται τουλάχιστον ένας έγκυρος εσωτερικός σύνδεσμος από τη λίστα")
         if kind == "eortologio":
             fails += checks.eortologio_names(html, plan["names"]) + checks.eortologio_saint(html, plan["saints"])
         if kind == "zodia":
-            # The fixed entertainment disclaimer is not treated as copied phrasing.
-            repeated = [item for item in checks.repetition(html, plan.get("previous", [])) if not any(w in item for w in ("ψυχαγωγ", "αστρολογ", "αποποι"))]
-            fails += checks.zodia_signs(html) + repeated
+            fails += checks.zodia_signs(html) + checks.zodia_repetition(html, plan.get("previous", []))
         if kind in ("health", "nutrition"):
             fails += checks.health_claims(html, self.blocked)
             if kind == "health" and article.subcategory not in config.HEALTH_SUBCATEGORIES:
@@ -234,11 +244,16 @@ class Runner:
         cands = linking.candidates(self.ctx, plan["category"], plan["topic"], exclude=plan["slug"])
         links = "\n".join(f"- {c['title']}: {config.SITE}/{c['slug']}/" for c in cands)
         domains = ", ".join(config.OFFICIAL_DOMAINS)
-        link_note = (
-            f"\n\nΥπενθύμιση συνδέσμων: 1-2 εσωτερικά <a href> μόνο από την παρακάτω λίστα και 1-2 <a href> προς {domains}."
-            if kind in EDITORIAL_KINDS
-            else ""
-        )
+        if kind == "lifestyle":
+            link_note = "\n\nΥπενθύμιση συνδέσμων: 1-2 εσωτερικά <a href> μόνο από την παρακάτω λίστα. Μην βάλεις εξωτερικό σύνδεσμο."
+        elif kind in EDITORIAL_KINDS:
+            link_note = (
+                f"\n\nΥπενθύμιση συνδέσμων: 1-2 εσωτερικά <a href> μόνο από την παρακάτω λίστα και 1-2 <a href> προς {domains}."
+            )
+        elif kind == "zodia":
+            link_note = "\n\nΒάλε 1 εσωτερικό <a href> από τη λίστα, μέσα σε μία παράγραφο."
+        else:
+            link_note = ""
         prompt = f"{TYPE_RULES[kind]}\n\n{plan['context']}{link_note}\n\nΥποψήφιοι εσωτερικοί σύνδεσμοι:\n{links}"
         system = system_prompt(kind)
         feedback: list[str] = []

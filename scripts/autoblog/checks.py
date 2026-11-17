@@ -27,8 +27,11 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
         fails.append("υπάρχει H1")
     if not 25 <= len(article.title) <= 60:
         fails.append(f"τίτλος {len(article.title)} χαρακτήρες, ζητούνται 25-60")
-    if not 140 <= len(article.meta_description) <= 160:
-        fails.append(f"meta {len(article.meta_description)} χαρακτήρες, ζητούνται 140-160")
+    # Daily zodia and lifestyle titles/descriptions land a few characters
+    # outside the ideal SEO band. That is not a reason to drop the article.
+    meta_low, meta_high = (120, 170) if kind in ("zodia", "lifestyle") else (140, 160)
+    if not meta_low <= len(article.meta_description) <= meta_high:
+        fails.append(f"meta {len(article.meta_description)} χαρακτήρες, ζητούνται {meta_low}-{meta_high}")
     key = util.fold(article.focus_keyword).strip()
     if not key or key not in util.fold(article.title):
         fails.append("το focus keyword λείπει από τον τίτλο")
@@ -46,7 +49,9 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
             fails.append(f"κλισέ φράση: {phrase}")
     if slug in ctx.slugs and slug != self_slug:
         fails.append(f"το slug {slug} υπάρχει ήδη")
-    clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT)
+    # Every day's horoscope is titled «Ζώδια σήμερα …». That series is not a duplicate.
+    skip_categories = {config.CATEGORY_BY_TYPE["zodia"]} if kind == "zodia" else None
+    clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT, skip_categories)
     if clash:
         fails.append(f"ο τίτλος μοιάζει με υπάρχοντα: {clash}")
     meta_key = " ".join(util.words(article.meta_description))
@@ -246,6 +251,44 @@ def zodia_signs(html: str) -> list[str]:
     return []
 
 
+# The daily template repeats these on purpose. They are not copied predictions.
+ZODIA_FIXED_MARKERS = (
+    "αποποιηση ευθυνησ",
+    "δεν αποτελει επιστημη",
+    "ψυχαγωγικο και ενημερωτικο",
+    "τι πρεπει να θυμασαι",
+    "συχνεσ ερωτησεισ",
+    "το τελικο συμπερασμα",
+    "η επομενη κινηση σου",
+    "τι κανεισ τωρα",
+)
+
+
+def _zodia_prediction_text(html: str) -> str:
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    doomed = []
+    for tag in soup.find_all(["p", "em", "li", "h2", "h3"]):
+        folded = util.fold(tag.get_text(" ", strip=True))
+        if any(marker in folded for marker in ZODIA_FIXED_MARKERS):
+            doomed.append(tag)
+    for tag in doomed:
+        if tag.parent is not None:
+            tag.decompose()
+    return util.html_text(str(soup))
+
+
 def repetition(html: str, previous: list[str]) -> list[str]:
     shared = util.shared_phrases(util.html_text(html), previous, 8)
+    return [f"επανάληψη φράσης από προηγούμενες ημέρες: «{s}»" for s in shared]
+
+
+def zodia_repetition(html: str, previous: list[str]) -> list[str]:
+    """Flag a copied prediction, not the disclaimer or the standing headings.
+
+    Twelve words is a sentence copied from an earlier day. Shorter lines of
+    everyday advice recur naturally and must not block the daily post.
+    """
+    shared = util.shared_phrases(_zodia_prediction_text(html), previous, 12)
     return [f"επανάληψη φράσης από προηγούμενες ημέρες: «{s}»" for s in shared]

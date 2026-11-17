@@ -109,6 +109,28 @@ def fix_links(html: str, *, kind: str, known_slugs: set[str], self_slug: str | N
     return str(soup), stats
 
 
+def ensure_internal_link(html: str, slug: str, title: str) -> str:
+    """Add one on-site link when the draft has none, just before the disclaimer."""
+    soup = BeautifulSoup(html, "html.parser")
+    paragraph = soup.new_tag("p")
+    paragraph.append("Δες επίσης: ")
+    anchor = soup.new_tag("a", href=f"{config.SITE}/{slug}/")
+    anchor.string = title
+    paragraph.append(anchor)
+    paragraph.append(".")
+    disclaimer = None
+    for node in soup.find_all(["p", "em"]):
+        if "αποποι" in util.fold(node.get_text(" ", strip=True)):
+            disclaimer = node if node.name == "p" else (node.find_parent("p") or node)
+            break
+    if disclaimer is not None:
+        disclaimer.insert_before(paragraph)
+    else:
+        soup.append(paragraph)
+    body = soup.body
+    return body.decode_contents() if body is not None else str(soup)
+
+
 def word_count(html: str) -> int:
     return len(util.WORD_RE.findall(util.html_text(html)))
 
