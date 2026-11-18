@@ -176,6 +176,149 @@ class NegativeChecks(unittest.TestCase):
         html, _ = render.fix_links('<p><a href="https://eody.gov.gr/a">ΕΟΔΥ</a></p>', kind="health", known_slugs=set(), self_slug=None)
         self.assertIn("eody.gov.gr", html)
 
+    def test_choris_is_not_a_divorce_claim(self):
+        html = "<p>Συμφώνησε τη διάθεση: Ρώτησε αν προτιμά κουβέντα, χωρίς να οργανώσεις πολλές επιλογές.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
+    def test_divorce_claim_still_fails(self):
+        html = "<p>Φήμες λένε ότι η Μαρία Παπαδοπούλου χώρισε τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου μίλησε για τον χωρισμό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου χωρίστηκε από τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Λέγεται ότι η Μαρία Παπαδοπούλου θα χωριστεί σύντομα.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+
+    def test_augmented_death_still_fails(self):
+        html = "<p>Φήμες λένε ότι η Μαρία Παπαδοπούλου απέθανε ξαφνικά.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+        html = "<p>Η Μαρία Παπαδοπούλου αποχωρίστηκε από τον σύντροφό της.</p>"
+        self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False))
+
+    def test_repeated_private_claims_still_fail(self):
+        for sentence in (
+            "Φήμες λένε ότι η Μαρία Παπαδοπούλου ξανασυνελήφθη χθες.",
+            "Ο Νίκος Παπαδόπουλος επαναπροφυλακίστηκε μετά την απόφαση.",
+            "Η Μαρία Παπαδοπούλου ξανανοσηλεύτηκε την ίδια εβδομάδα.",
+            "Η Μαρία Παπαδοπούλου επανενοσηλεύτηκε την ίδια εβδομάδα.",
+            "Ο Νίκος Παπαδόπουλος ξαναχρεοκόπησε μέσα στη χρονιά.",
+        ):
+            html = f"<p>{sentence}</p>"
+            self.assertTrue(checks.blocked_claims(html, BLOCKED, official_sources=False), sentence)
+
+    def test_register_and_immortalize_are_not_private_claims(self):
+        html = "<p>Η Μαρία Παπαδοπούλου καταχώρισε το νέο της σήμα.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Ο Νίκος Παπαδόπουλος καταχωρίζει κάθε εμφάνιση στο αρχείο.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου αποθανάτισε τη βραδιά με μια φωτογραφία.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου μίλησε για την επανάσταση του 1821.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
+    def test_athanatos_is_not_a_death_claim(self):
+        html = "<p>Η Μαρία Παπαδοπούλου μένει αθάνατη στη μνήμη του κοινού.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
+    def test_xexorizei_is_not_a_divorce_claim(self):
+        html = "<p>Η Μαρία Παπαδοπούλου ξεχωρίζει για τη δουλειά της στη σκηνή.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+        html = "<p>Η Μαρία Παπαδοπούλου ξεχώρισε στην παράσταση της Αθήνας.</p>"
+        self.assertEqual(checks.blocked_claims(html, BLOCKED, official_sources=False), [])
+
+    def test_zodia_disclaimer_is_not_repetition(self):
+        disclaimer = (
+            "Αποποίηση ευθύνης: Το άρθρο αυτό έχει αποκλειστικά ψυχαγωγικό και ενημερωτικό χαρακτήρα. "
+            "Η αστρολογία δεν αποτελεί επιστήμη και δεν πρέπει να χρησιμοποιείται ως βάση για σημαντικές αποφάσεις. "
+            "Οι πληροφορίες προέρχονται από την αστρολογική παράδοση και τις δημοφιλείς ερμηνείες."
+        )
+        html = f"<h2>Συχνές ερωτήσεις για τα ζώδια της ημέρας</h2><p>Νέα πρόβλεψη για τον Κριό σήμερα.</p><p><em>{disclaimer}</em></p>"
+        previous = [disclaimer + " Συχνές ερωτήσεις για τα ζώδια της ημέρας 2026 αξιολόγησε την με βάση τη δική σου εμπειρία"]
+        self.assertEqual(checks.zodia_repetition(html, previous), [])
+
+    def test_zodia_copied_sentence_still_fails(self):
+        sentence = "η πρωινή βόλτα μένει σύντομη και χωρίς βιασύνη όταν ο καιρός είναι βαρύς στην πόλη"
+        html = f"<p>{sentence}</p>"
+        self.assertTrue(checks.zodia_repetition(html, [sentence]))
+
+    def test_daily_zodia_title_is_not_a_duplicate(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        title = "Ζώδια σήμερα: Ο οδηγός σου για τις 17 Νοεμβρίου 2026"
+        self.assertIsNotNone(ctx.similar_title(title, config.SIMILARITY_REJECT))
+        self.assertIsNone(ctx.similar_title(title, config.SIMILARITY_REJECT, {407}))
+
+    def test_lifestyle_does_not_need_takeaways_or_plan(self):
+        article = zodia_article("kapoio-arthro").model_copy(update={"focus_keyword": "Θέμα", "title": "Θέμα που μένει μέσα στο όριο τίτλου"})
+        html = (
+            "<p>Εισαγωγή για το θέμα, χωρίς λίστα από κάτω.</p>"
+            "<h2>Θέμα στην πρώτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στη δεύτερη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στην τρίτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<h2>Θέμα στην τέταρτη ενότητα</h2><p>Κείμενο ενότητας.</p>"
+            "<p><em>Αποποίηση ευθύνης: Οι αναφορές βασίζονται σε δημόσια γνωστές πληροφορίες.</em></p>"
+        )
+        fails = checks.editorial_structure(
+            article, html,
+            disclaimer=("αποποίηση ευθύνης", "δημόσια γνωστές πληροφορίες"),
+            h2_range=(4, 6),
+            require_closing=False,
+            require_takeaways=False,
+            require_steps=False,
+        )
+        self.assertEqual(fails, [])
+        still_required = checks.editorial_structure(article, html, require_closing=False)
+        self.assertTrue(any("Θυμάσαι" in item for item in still_required))
+        self.assertTrue(any("πλάνο" in item for item in still_required))
+
+    def test_lifestyle_meta_near_miss_passes(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        article = zodia_article("kapoio-arthro")
+        article = article.model_copy(update={"meta_description": "α" * 166, "title": "Ένας εντελώς νέος τίτλος lifestyle για το τεστ"})
+        fails = checks.common(
+            article,
+            "<p>" + ("λέξη " * 200) + "</p>",
+            kind="lifestyle",
+            slug="neo-slug-pou-den-yparxei-pote",
+            ctx=ctx,
+        )
+        self.assertFalse(any(item.startswith("meta ") for item in fails), fails)
+
+    def test_zodia_and_lifestyle_publish_without_checks(self):
+        article = Article(
+            title="μικρό",
+            meta_description="κοντό",
+            focus_keyword="άλλο",
+            excerpt="σύντομο",
+            body_markdown="<p>Η Μαρία Παπαδοπούλου χώρισε, χωρίς άλλη λίστα και χωρίς αποποίηση.</p>",
+            image_queries=["a table", "a room", "a street"],
+            image_alts=["τραπέζι"],
+        )
+        runner = Runner(date(2027, 11, 18), dry_run=True, commit=False, log=lambda *_: None)
+        base = {
+            "slug": "dokimi-pou-den-yparxei",
+            "topic": "δοκιμή",
+            "update": False,
+            "previous": ["η πρωινή βόλτα μένει σύντομη και χωρίς βιασύνη όταν ο καιρός είναι βαρύς στην πόλη"],
+            "source_texts": ["Η Μαρία Παπαδοπούλου χώρισε, χωρίς άλλη λίστα και χωρίς αποποίηση από την πηγή"],
+        }
+        zodia_fails, _, _ = runner.check("zodia", {**base, "category": 407}, article)
+        lifestyle_fails, _, _ = runner.check("lifestyle", {**base, "category": 408}, article)
+        self.assertEqual(zodia_fails, [])
+        self.assertEqual(lifestyle_fails, [])
+
+    def test_zodia_missing_link_is_inserted(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        link = next(item["slug"] for item in ctx.index if 19 in item["categories"])
+        article = zodia_article(link)
+        article = article.model_copy(update={"body_markdown": article.body_markdown.replace(f'<a href="{config.SITE}/{link}/">οδηγό</a>', "οδηγό")})
+        runner = Runner(date(2027, 11, 9), dry_run=True, commit=False, log=lambda *_: None)
+        plan = runner.plan("zodia", 0)
+        fails, html, _slug = runner.check("zodia", plan, article)
+        self.assertNotIn("<a href=", article.body_markdown)
+        self.assertIn("<a href=", html)
+        self.assertFalse(any("σύνδεσμο" in item for item in fails), fails)
+
     def test_sanitizer_drops_scripts_and_h1(self):
         html = render.markdown_to_html("# Τίτλος\n\n<script>alert(1)</script>\n\nκείμενο")
         self.assertNotIn("<script", html)

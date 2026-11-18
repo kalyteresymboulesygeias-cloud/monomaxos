@@ -27,8 +27,11 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
         fails.append("υπάρχει H1")
     if not 25 <= len(article.title) <= 60:
         fails.append(f"τίτλος {len(article.title)} χαρακτήρες, ζητούνται 25-60")
-    if not 140 <= len(article.meta_description) <= 160:
-        fails.append(f"meta {len(article.meta_description)} χαρακτήρες, ζητούνται 140-160")
+    # Daily zodia and lifestyle titles/descriptions land a few characters
+    # outside the ideal SEO band. That is not a reason to drop the article.
+    meta_low, meta_high = (120, 170) if kind in ("zodia", "lifestyle") else (140, 160)
+    if not meta_low <= len(article.meta_description) <= meta_high:
+        fails.append(f"meta {len(article.meta_description)} χαρακτήρες, ζητούνται {meta_low}-{meta_high}")
     key = util.fold(article.focus_keyword).strip()
     if not key or key not in util.fold(article.title):
         fails.append("το focus keyword λείπει από τον τίτλο")
@@ -46,7 +49,9 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
             fails.append(f"κλισέ φράση: {phrase}")
     if slug in ctx.slugs and slug != self_slug:
         fails.append(f"το slug {slug} υπάρχει ήδη")
-    clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT)
+    # Every day's horoscope is titled «Ζώδια σήμερα …». That series is not a duplicate.
+    skip_categories = {config.CATEGORY_BY_TYPE["zodia"]} if kind == "zodia" else None
+    clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT, skip_categories)
     if clash:
         fails.append(f"ο τίτλος μοιάζει με υπάρχοντα: {clash}")
     meta_key = " ".join(util.words(article.meta_description))
@@ -63,13 +68,54 @@ def _named_person(sentence: str) -> bool:
     return len(caps) > 1 or bool(caps and not sentence.strip().startswith(caps[0]))
 
 
+# One-letter past augment, only for verb stems. «αθάνατος» must not match «θανατ».
+_VERBAL_AUGMENT = ("α", "ε")
+_AUGMENTED_ROOTS = {"πεθαν", "πεθαιν"}
+# «επανενοσηλεύτηκε» is επαν- plus the past augment ε, not επανα- glued to the stem.
+# «καταχωρίζει» and «αποθανάτισε» stay outside this list.
+_REPEAT_PREFIXES = ("ξανα", "επανα", "επανε", "επαν")
+_DIVORCE_ROOTS = {
+    "χωρισμ", "χωρισε", "χωρισαν", "χωρισαμ", "χωρισατ",
+    "χωρισουν", "χωριστηκ", "χωριστε", "χωριστου", "χωριζ",
+}
+_DIVORCE_PREFIXES = ("απο",)
+
+
+def _stem_in_token(token: str, root: str) -> bool:
+    if token.startswith(root):
+        return True
+    if root in _AUGMENTED_ROOTS and any(token.startswith(mark + root) for mark in _VERBAL_AUGMENT):
+        return True
+    if any(token.startswith(prefix + root) for prefix in _REPEAT_PREFIXES):
+        return True
+    if root in _DIVORCE_ROOTS:
+        return any(token.startswith(prefix + root) for prefix in _DIVORCE_PREFIXES)
+    return False
+
+
+def _root_hit(folded: str, roots: list[str]) -> str | None:
+    """Match a stem at the start of a word, after a past augment, or after a real prefix.
+
+    «απέθανε» counts as «πεθαν». «ξεχωρίζει» does not count as «χωρίζει», and «χωρίς» is not «χωρισμός».
+    """
+    tokens = util.words(folded)
+    for root in roots:
+        if " " in root:
+            if root in folded:
+                return root
+            continue
+        if any(_stem_in_token(token, root) for token in tokens):
+            return root
+    return None
+
+
 def blocked_claims(html: str, blocked: dict, official_sources: bool) -> list[str]:
     fails = []
     roots = [util.fold(r) for r in blocked["roots"]]
     markers = [util.fold(m) for m in blocked["official_markers"]]
     for sentence in SENTENCE_SPLIT.split(util.html_text(html)):
         folded = util.fold(sentence)
-        hit = next((r for r in roots if r in folded), None)
+        hit = _root_hit(folded, roots)
         if not hit or not _named_person(sentence):
             continue
         if official_sources and any(m in folded for m in markers):
@@ -104,8 +150,10 @@ def editorial_structure(
     extra_cliches: tuple[str, ...] = (),
     h2_range: tuple[int, int] = (5, 8),
     require_closing: bool = True,
+    require_takeaways: bool = True,
+    require_steps: bool = True,
 ) -> list[str]:
-    """House template: takeaways, sections, steps, five questions, a real closing title, disclaimer."""
+    """House template: sections, disclaimer, and, where the type asks for them, takeaways and a plan."""
     from bs4 import BeautifulSoup
 
     fails: list[str] = []
@@ -116,10 +164,11 @@ def editorial_structure(
     start = util.fold(" ".join(text.split()[:8]))
     if any(start.startswith(util.fold(opener)) for opener in OPENERS):
         fails.append("απαγορευμένη εκκίνηση εισαγωγής")
-    bullets = soup.find("ul")
-    if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
-        fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
-    if soup.find("ol") is None:
+    if require_takeaways:
+        bullets = soup.find("ul")
+        if bullets is None or len(bullets.find_all("li")) < 4 or bullets.find("strong") is None:
+            fails.append("λείπει το πλαίσιο «Τι Πρέπει να Θυμάσαι» με 4-5 έντονα bullets")
+    if require_steps and soup.find("ol") is None:
         fails.append("λείπει αριθμημένη λίστα ή πρακτικό πλάνο")
     h2s = render.h2_titles(html)
     low_h2, high_h2 = h2_range
@@ -246,6 +295,44 @@ def zodia_signs(html: str) -> list[str]:
     return []
 
 
+# The daily template repeats these on purpose. They are not copied predictions.
+ZODIA_FIXED_MARKERS = (
+    "αποποιηση ευθυνησ",
+    "δεν αποτελει επιστημη",
+    "ψυχαγωγικο και ενημερωτικο",
+    "τι πρεπει να θυμασαι",
+    "συχνεσ ερωτησεισ",
+    "το τελικο συμπερασμα",
+    "η επομενη κινηση σου",
+    "τι κανεισ τωρα",
+)
+
+
+def _zodia_prediction_text(html: str) -> str:
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    doomed = []
+    for tag in soup.find_all(["p", "em", "li", "h2", "h3"]):
+        folded = util.fold(tag.get_text(" ", strip=True))
+        if any(marker in folded for marker in ZODIA_FIXED_MARKERS):
+            doomed.append(tag)
+    for tag in doomed:
+        if tag.parent is not None:
+            tag.decompose()
+    return util.html_text(str(soup))
+
+
 def repetition(html: str, previous: list[str]) -> list[str]:
     shared = util.shared_phrases(util.html_text(html), previous, 8)
+    return [f"επανάληψη φράσης από προηγούμενες ημέρες: «{s}»" for s in shared]
+
+
+def zodia_repetition(html: str, previous: list[str]) -> list[str]:
+    """Flag a copied prediction, not the disclaimer or the standing headings.
+
+    Twelve words is a sentence copied from an earlier day. Shorter lines of
+    everyday advice recur naturally and must not block the daily post.
+    """
+    shared = util.shared_phrases(_zodia_prediction_text(html), previous, 12)
     return [f"επανάληψη φράσης από προηγούμενες ημέρες: «{s}»" for s in shared]
