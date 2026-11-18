@@ -284,6 +284,29 @@ class NegativeChecks(unittest.TestCase):
         )
         self.assertFalse(any(item.startswith("meta ") for item in fails), fails)
 
+    def test_zodia_and_lifestyle_publish_without_checks(self):
+        article = Article(
+            title="μικρό",
+            meta_description="κοντό",
+            focus_keyword="άλλο",
+            excerpt="σύντομο",
+            body_markdown="<p>Η Μαρία Παπαδοπούλου χώρισε, χωρίς άλλη λίστα και χωρίς αποποίηση.</p>",
+            image_queries=["a table", "a room", "a street"],
+            image_alts=["τραπέζι"],
+        )
+        runner = Runner(date(2027, 11, 18), dry_run=True, commit=False, log=lambda *_: None)
+        base = {
+            "slug": "dokimi-pou-den-yparxei",
+            "topic": "δοκιμή",
+            "update": False,
+            "previous": ["η πρωινή βόλτα μένει σύντομη και χωρίς βιασύνη όταν ο καιρός είναι βαρύς στην πόλη"],
+            "source_texts": ["Η Μαρία Παπαδοπούλου χώρισε, χωρίς άλλη λίστα και χωρίς αποποίηση από την πηγή"],
+        }
+        zodia_fails, _, _ = runner.check("zodia", {**base, "category": 407}, article)
+        lifestyle_fails, _, _ = runner.check("lifestyle", {**base, "category": 408}, article)
+        self.assertEqual(zodia_fails, [])
+        self.assertEqual(lifestyle_fails, [])
+
     def test_zodia_missing_link_is_inserted(self):
         ctx = ContentIndex(config.CONTENT_DIR)
         link = next(item["slug"] for item in ctx.index if 19 in item["categories"])

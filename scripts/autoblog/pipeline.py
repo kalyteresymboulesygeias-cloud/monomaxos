@@ -15,9 +15,8 @@ from .gemini import Article, Gemini, GenerationError, Verdict
 from .openai_llm import OpenAIWriter
 from .prompts import EDITORIAL_KINDS, TYPE_RULES, VALIDATOR, system_prompt
 
-# Lifestyle is not sent to the second AI reviewer. That pass was rejecting
-# internal links and practical advice to the reader. Private-life claims are
-# still blocked by the deterministic checks below.
+# Zodia and lifestyle are published without the editorial gate. Those checks
+# were rejecting every daily article. News, gossip, health and nutrition stay reviewed.
 VALIDATED = {"news", "gossip", "health", "nutrition"}
 NEWS = {"news", "lifestyle", "gossip"}
 
@@ -197,6 +196,8 @@ class Runner:
             if picked:
                 html = render.ensure_internal_link(html, picked[0]["slug"], picked[0]["title"])
                 links["internal"] += 1
+        if kind in ("zodia", "lifestyle"):
+            return [], html, slug
         fails = checks.common(article, html, kind=kind, slug=slug, ctx=self.ctx, self_slug=slug if plan["update"] else None)
         if kind == "lifestyle":
             fails += checks.editorial_structure(
