@@ -54,12 +54,12 @@ WORD_RANGE = {
 MIN_H2 = {"eortologio": 2}
 # Athens wall-clock publish time; extra articles of the same type go +2h each.
 PUBLISH_TIME = {
-    "eortologio": "06:00",
-    "zodia": "06:05",
+    "eortologio": "07:00",
+    "zodia": "07:00",
     "health": "09:00",
     "nutrition": "09:30",
     "news": "12:00",
-    "lifestyle": "13:00",
+    "lifestyle": "07:00",
     "gossip": "13:30",
 }
 # Per-type daily maxima. Phase 1: first two weeks (4/day overall). Phase 2: 6-7/day.
