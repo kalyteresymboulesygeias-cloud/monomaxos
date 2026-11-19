@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Tell the auto-blog workflow whether this run should publish, and how long to wait.
 
-Schedule runs exit immediately when they are more than 40 minutes early, so the
-extra crons that GitHub starts on time (or many hours late) do not publish.
-A manual workflow_dispatch always runs the requested type.
+A scheduled run publishes every slot whose hour has arrived and is not done
+yet, and waits if the next one is less than three hours away. A run in the
+middle of the night exits. A manual workflow_dispatch always runs the
+requested type.
 """
 from __future__ import annotations
 
@@ -69,22 +70,19 @@ def main() -> int:
         return 0
 
     schedule = os.environ.get("SCHEDULE", "")
-    slot = clock.SLOT_BY_CRON.get(schedule)
     now = datetime.now(clock.ATHENS)
-    if slot is None:
-        emit({"proceed": "false", "sleep": "0", "types": "", "count": "1", "dry": "false"})
-        print(f"unknown schedule: {schedule!r}")
-        return 0
-
     phase = config.phase()
     limits = config.DAILY_LIMIT[phase]
-    done = clock.satisfied(load_records(), now.date(), slot, limits)
-    proceed, sleep, reason = clock.decide(now, slot, done, catch_up=schedule in clock.CATCH_UP_CRONS)
+    slots, sleep, reason = clock.plan(now, load_records(), limits)
+    types: list[str] = []
+    for slot in slots:
+        types.extend(clock.SLOTS[slot]["types"])
+    print(f"schedule={schedule!r}")
     print(reason)
     emit({
-        "proceed": "true" if proceed else "false",
+        "proceed": "true" if types else "false",
         "sleep": str(sleep),
-        "types": " ".join(clock.SLOTS[slot]["types"]) if proceed else "",
+        "types": " ".join(types),
         "count": "1",
         "dry": "false",
     })

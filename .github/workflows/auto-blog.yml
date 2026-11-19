@@ -2,11 +2,10 @@ name: auto-blog
 
 # Crons are UTC. Which slot each one belongs to, and the Athens hours
 # (07:00 for zodia and lifestyle, 09:00, 13:00), live in scripts/autoblog/clock.py.
-# GitHub starts these hours late, so each slot also has crons 6–10 hours
-# earlier. A run that is more than 40 minutes early exits. One that is close
-# waits until the slot. Those early crons only publish within 90 minutes after
-# the slot, so an on-time evening start does not publish. The original three
-# stay as a late catch-up.
+# GitHub starts these hours late and sometimes skips the one on the hour, so
+# each slot also has crons 6–10 hours earlier. A run within three hours before
+# a slot waits. Any run after that hour publishes whatever is still missing
+# today, whichever cron woke it. A run in the middle of the night exits.
 on:
   schedule:
     - cron: "0 5 * * *"
@@ -71,7 +70,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 360
     if: vars.AUTO_BLOG_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
     env:
       AUTO_BLOG_ENABLED: ${{ vars.AUTO_BLOG_ENABLED }}
