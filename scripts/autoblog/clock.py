@@ -1,12 +1,15 @@
 """When the daily articles are allowed to publish.
 
-GitHub Actions starts a `schedule` event hours after the clock time we ask for.
-The workflow therefore registers several daily crons for each slot: the real
-Athens hour, and the same hour 6–10 hours earlier. A run that starts too early
-does nothing. The first run that starts shortly before the slot waits, then
-publishes. An early cron only publishes in the 90 minutes after the slot, so
-one that starts on time in the evening does not publish the morning articles.
-The original three crons stay as the catch-up if the earlier ones never land.
+GitHub Actions starts a `schedule` event hours after the clock time we ask for,
+and some days it never starts the cron that sits on the slot itself. The
+workflow therefore registers several daily crons for each slot: the real Athens
+hour, and the same hour 6–10 hours earlier.
+
+A run looks at every slot, not only the cron that woke it. Within three hours
+before a slot it waits, then publishes at that hour. After the hour has passed,
+any run later the same day publishes whatever is still missing. A run in the
+middle of the night is more than three hours early, so it does nothing and
+does not publish the next morning's articles ahead of time.
 """
 from __future__ import annotations
 
@@ -15,12 +18,12 @@ from zoneinfo import ZoneInfo
 
 ATHENS = ZoneInfo("Europe/Athens")
 
-# How early a run may be and still wait for the slot. The job timeout is 90
-# minutes and generation needs the rest, so this stays under 40 minutes.
-EARLY_WINDOW = timedelta(minutes=40)
-# How late an early cron may be and still publish. Wider than that is the
-# evening, and those runs must not publish today's slot.
-LATE_WINDOW = timedelta(minutes=90)
+# How early a run may be and still wait for the slot. The job timeout is 6
+# hours; generation, tests and the install need the rest, so the wait stays
+# inside three hours. On 19 Nov 2026 the closest run started 53 minutes early
+# and the old 40-minute window told it to exit, so the morning articles never
+# went out.
+EARLY_WINDOW = timedelta(hours=3)
 
 # Offsets that match the delays seen on this repo (about 6–10 hours).
 DELAY_OFFSETS_H = (6, 7, 8, 9, 10)
@@ -32,8 +35,8 @@ SLOTS = {
     "afternoon": {"hour": 13, "minute": 0, "types": ("news", "gossip"), "cron_minute": 27},
 }
 
-# The original three crons. They are late, and they stay as the catch-up if the
-# earlier ones are dropped. 05:00 UTC is 07:00 in Athens in winter.
+# The original three crons. 05:00 UTC is 07:00 in Athens in winter. Any run
+# after a slot's hour now catches up, so these are no longer the only net.
 LEGACY_CRONS = (
     ("0 5 * * *", "morning"),
     ("0 7 * * *", "midday"),
@@ -61,7 +64,7 @@ def cron_expressions() -> list[tuple[str, str]]:
 
 
 SLOT_BY_CRON = {expr: name for expr, name in cron_expressions()}
-CATCH_UP_CRONS = {expr for expr, _name in LEGACY_CRONS}
+SLOT_ORDER = ("morning", "midday", "afternoon")
 
 
 def slot_target(now: datetime, slot: str) -> datetime:
@@ -87,11 +90,11 @@ def satisfied(records: list[dict], day, slot: str, limits: dict[str, int]) -> bo
     return True
 
 
-def decide(now: datetime, slot: str, done: bool, *, catch_up: bool = False) -> tuple[bool, int, str]:
+def decide(now: datetime, slot: str, done: bool) -> tuple[bool, int, str]:
     """Return (publish, seconds to wait, reason). `now` is Athens local time.
 
-    `catch_up` is only for the original three crons. The earlier ones publish
-    inside a window around the slot, so an on-time evening start does nothing.
+    After the slot's hour, any later run on the same day publishes. The only
+    runs that exit are the ones that are still more than three hours early.
     """
     if now.tzinfo is None:
         now = now.replace(tzinfo=ATHENS)
@@ -104,8 +107,36 @@ def decide(now: datetime, slot: str, done: bool, *, catch_up: bool = False) -> t
         return False, 0, f"{slot}: νωρίς κατά {minutes} λεπτά"
     if early.total_seconds() > 0:
         return True, int(early.total_seconds()), f"{slot}: αναμονή ως {target.strftime('%H:%M')}"
-    late = now - target
-    if catch_up or late <= LATE_WINDOW:
-        return True, 0, f"{slot}: ώρα δημοσίευσης"
-    minutes = int(late.total_seconds() // 60)
-    return False, 0, f"{slot}: {minutes} λεπτά μετά το παράθυρο"
+    return True, 0, f"{slot}: ώρα δημοσίευσης"
+
+
+def plan(now: datetime, records: list[dict], limits: dict[str, int]) -> tuple[list[str], int, str]:
+    """Slots to publish on this run, how long to wait first, and why.
+
+    A missed morning slot is published by whatever run shows up afterwards,
+    including the midday one. A slot that is merely close is waited for only
+    when nothing earlier is already overdue, so a late morning is not held
+    back until 09:00.
+    """
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=ATHENS)
+    day = now.date()
+    chosen: list[str] = []
+    sleep = 0
+    notes: list[str] = []
+    for name in SLOT_ORDER:
+        proceed, slot_sleep, reason = decide(now, name, satisfied(records, day, name, limits))
+        if not proceed:
+            notes.append(reason)
+            continue
+        if slot_sleep > 0:
+            if chosen:
+                notes.append(f"{name}: μένει για την επόμενη εκτέλεση")
+                break
+            sleep = slot_sleep
+            chosen.append(name)
+            notes.append(reason)
+            break
+        chosen.append(name)
+        notes.append(reason)
+    return chosen, sleep, "; ".join(notes)

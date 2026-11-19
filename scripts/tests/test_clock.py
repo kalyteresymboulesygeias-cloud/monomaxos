@@ -1,4 +1,4 @@
-"""The publish clock: early runs wait or exit, late runs publish once."""
+"""The publish clock: a close run waits, a later run the same day catches up."""
 from __future__ import annotations
 
 import sys
@@ -53,17 +53,53 @@ class Clock(unittest.TestCase):
         self.assertTrue(proceed)
         self.assertEqual(sleep, 0)
 
-    def test_on_time_evening_offset_does_not_publish(self):
-        # 21:07 UTC is 23:07 in Athens in November. That cron exists so a
-        # multi-hour GitHub delay lands near 07:00, not so it publishes at night.
+    def test_same_day_evening_publishes_a_missed_morning(self):
+        # 23:07 is still the same Athens day. Today's articles are already due.
         proceed, sleep, reason = clock.decide(at("2026-11-17T23:07:00"), "morning", False)
-        self.assertFalse(proceed, reason)
-        self.assertEqual(sleep, 0)
-
-    def test_legacy_cron_still_catches_up_later_the_same_day(self):
-        proceed, sleep, reason = clock.decide(at("2026-11-17T14:34:00"), "morning", False, catch_up=True)
         self.assertTrue(proceed, reason)
         self.assertEqual(sleep, 0)
+
+    def test_any_later_run_catches_up_the_same_day(self):
+        proceed, sleep, reason = clock.decide(at("2026-11-17T14:34:00"), "morning", False)
+        self.assertTrue(proceed, reason)
+        self.assertEqual(sleep, 0)
+
+    def test_three_hours_early_still_waits_for_the_slot(self):
+        # 19 Nov 2026: the 05:05 run was told to exit and nothing else landed
+        # on 07:00. A start at 05:05 is 115 minutes early and now waits.
+        proceed, sleep, reason = clock.decide(at("2026-11-19T05:05:00"), "morning", False)
+        self.assertTrue(proceed, reason)
+        self.assertEqual(sleep, 115 * 60)
+
+    def test_missed_morning_rides_along_with_the_midday_run(self):
+        slots, sleep, reason = clock.plan(at("2026-11-19T09:36:00"), [], LIMITS_PHASE_1)
+        self.assertEqual(slots, ["morning", "midday"], reason)
+        self.assertEqual(sleep, 0)
+
+    def test_overdue_morning_is_not_held_until_midday(self):
+        slots, sleep, reason = clock.plan(at("2026-11-19T07:30:00"), [], LIMITS_PHASE_1)
+        self.assertEqual(slots, ["morning"], reason)
+        self.assertEqual(sleep, 0)
+
+    def test_a_start_just_before_seven_waits(self):
+        slots, sleep, reason = clock.plan(at("2026-11-19T06:06:00"), [], LIMITS_PHASE_1)
+        self.assertEqual(slots, ["morning"], reason)
+        self.assertEqual(sleep, 54 * 60)
+
+    def test_middle_of_the_night_publishes_nothing(self):
+        slots, sleep, _reason = clock.plan(at("2026-11-19T02:17:00"), [], LIMITS_PHASE_1)
+        self.assertEqual(slots, [])
+        self.assertEqual(sleep, 0)
+
+    def test_finished_morning_waits_for_midday(self):
+        records = [
+            {"date": "2026-11-19", "type": "eortologio", "status": "PASS"},
+            {"date": "2026-11-19", "type": "zodia", "status": "PASS"},
+            {"date": "2026-11-19", "type": "lifestyle", "status": "PASS"},
+        ]
+        slots, sleep, reason = clock.plan(at("2026-11-19T08:00:00"), records, LIMITS_PHASE_1)
+        self.assertEqual(slots, ["midday"], reason)
+        self.assertEqual(sleep, 60 * 60)
 
     def test_does_not_repeat_a_finished_slot(self):
         proceed, _sleep, reason = clock.decide(at("2026-11-17T06:05:00"), "morning", True)
