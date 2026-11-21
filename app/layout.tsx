@@ -36,9 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const nav = getNavCategories();
   return (
     <html lang="el" className={`${sans.variable} ${serif.variable}`}>
-      <head>
-        <script src="https://analytics.ahrefs.com/analytics.js" data-key="AQj051+4yPQeO5zJlPUzVg" async />
-      </head>
       <body className="bg-paper text-ink antialiased">
         <Script id="gtm" strategy="lazyOnload">{`
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
