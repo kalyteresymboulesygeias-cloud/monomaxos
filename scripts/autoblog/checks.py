@@ -49,8 +49,9 @@ def common(article, html: str, *, kind: str, slug: str, ctx, self_slug: str | No
             fails.append(f"κλισέ φράση: {phrase}")
     if slug in ctx.slugs and slug != self_slug:
         fails.append(f"το slug {slug} υπάρχει ήδη")
-    # Every day's horoscope is titled «Ζώδια σήμερα …». That series is not a duplicate.
-    skip_categories = {config.CATEGORY_BY_TYPE["zodia"]} if kind == "zodia" else None
+    # Daily series («Ζώδια σήμερα …», «Εορτολόγιο 22 Νοεμβρίου …») differ only by date.
+    # They are not duplicates of each other.
+    skip_categories = {config.CATEGORY_BY_TYPE[kind]} if kind in ("zodia", "eortologio") else None
     clash = None if self_slug else ctx.similar_title(article.title, config.SIMILARITY_REJECT, skip_categories)
     if clash:
         fails.append(f"ο τίτλος μοιάζει με υπάρχοντα: {clash}")
