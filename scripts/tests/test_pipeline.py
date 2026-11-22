@@ -248,6 +248,12 @@ class NegativeChecks(unittest.TestCase):
         self.assertIsNotNone(ctx.similar_title(title, config.SIMILARITY_REJECT))
         self.assertIsNone(ctx.similar_title(title, config.SIMILARITY_REJECT, {407}))
 
+    def test_daily_eortologio_title_is_not_a_duplicate(self):
+        ctx = ContentIndex(config.CONTENT_DIR)
+        title = "Εορτολόγιο 22 Νοεμβρίου: Ποιοι γιορτάζουν το 2026"
+        self.assertIsNotNone(ctx.similar_title(title, config.SIMILARITY_REJECT))
+        self.assertIsNone(ctx.similar_title(title, config.SIMILARITY_REJECT, {config.CATEGORY_BY_TYPE["eortologio"]}))
+
     def test_lifestyle_does_not_need_takeaways_or_plan(self):
         article = zodia_article("kapoio-arthro").model_copy(update={"focus_keyword": "Θέμα", "title": "Θέμα που μένει μέσα στο όριο τίτλου"})
         html = (
