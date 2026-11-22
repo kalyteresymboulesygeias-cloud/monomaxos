@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import EditorialBand from "@/components/EditorialBand";
 import HeroFeatured from "@/components/HeroFeatured";
 import Pagination from "@/components/Pagination";
 import SectionRail from "@/components/SectionRail";
 import { displayName, stripHtml } from "@/components/editorial";
 import { getCategories, getIndex, getNavCategories, getPost, getPostsByCategory } from "@/lib/content";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export const PER_PAGE = 24;
 
