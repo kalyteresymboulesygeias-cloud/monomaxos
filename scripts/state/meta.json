@@ -52,7 +52,10 @@
    "gemini": 5,
    "unsplash": 11
   },
-  "2026-11-24": {}
+  "2026-11-24": {
+   "gemini": 1,
+   "unsplash": 2
+  }
  },
  "health_first_run": "2026-11-09"
 }
