@@ -1,9 +1,5 @@
 {
  "usage": {
-  "2026-11-12": {
-   "gemini": 8,
-   "unsplash": 2
-  },
   "2026-11-13": {
    "gemini": 11,
    "unsplash": 3
@@ -55,6 +51,10 @@
   "2026-11-25": {
    "gemini": 5,
    "unsplash": 8
+  },
+  "2026-11-26": {
+   "gemini": 1,
+   "unsplash": 3
   }
  },
  "health_first_run": "2026-11-09"
